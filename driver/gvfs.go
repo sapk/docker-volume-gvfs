@@ -2,17 +2,18 @@ package driver
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/docker/docker/volume"
+	"github.com/docker/go-plugins-helpers/volume"
 )
 
 type gvfsVolume struct {
-	uri         string
+	url         string
 	mountpoint  string
 	connections int
 }
@@ -35,27 +36,48 @@ func newGVfsDriver(root string) *gvfsDriver {
 func (d gvfsDriver) startFuseDeamon() error {
 	//TODO check if not allready started by other ? -> Normaly gvfsd-fuse block such so this like crash
 	//TODO check if folder need to be created like in Mount
-	cmd := fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes", root)
+	cmd := fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes", d.root)
 	log.Debugf(cmd)
 	return exec.Command("sh", "-c", cmd).Start() //We execut in background
 }
 
+func urlToMountPoint(root string, urlString string) (string, error) {
+	//Done ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
+	//TODO ftp://sapk@10.8.0.7:42 -> ftp:host=10.8.0.7,user=sapk,port=4242 ???
+	//TODO ftp://10.8.0.7 -> ftp:host=10.8.0.7 ???
+	//TODO ftp://sapk.fr -> ftp:host=sapk.fr ???
+	//TODO other sheme
+	u, err := url.Parse(urlString)
+	if err != nil {
+		return "", err
+	}
+	name := u.Scheme + ":host=" + u.Host
+	if u.User != nil { //TODO test it
+		name += ",user=" + u.User.Username()
+	}
+	return filepath.Join(root, name), nil
+}
 func (d gvfsDriver) Create(r volume.Request) volume.Response {
 	log.Debugf("Entering Create: name: %s, options %v", r.Name, r.Options)
 	d.Lock()
 	defer d.Unlock()
 
-	if r.Options == nil || r.Options["uri"] == "" {
-		return volume.Response{Err: "uri option required"}
+	if r.Options == nil || r.Options["url"] == "" {
+		return volume.Response{Err: "url option required"}
 	}
 
+	m, err := urlToMountPoint(d.root, r.Options["url"])
+	if err != nil {
+		return volume.Response{Err: err.Error()}
+	}
 	v := &gvfsVolume{
-		uri:         r.Options["uri"],
-		mountpoint:  filepath.Join(d.root, r.Options["uri"]), //TODO test //ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
+		url:         r.Options["url"],
+		mountpoint:  m,
 		connections: 0,
 	}
 
 	d.volumes[r.Name] = v
+	log.Debugf("Volume Created: %v", v)
 	return volume.Response{}
 }
 
@@ -126,7 +148,7 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 
 	v, ok := d.volumes[r.Name]
 	if !ok {
-		return responseError(fmt.Sprintf("volume %s not found", r.Name))
+		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
 	}
 
 	if v.connections > 0 {
@@ -146,25 +168,35 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 	if fi != nil && !fi.IsDir() {
 		return volume.Response{Err: fmt.Sprintf("%v already exist and it's not a directory", v.mountpoint)}
 	}
-	/*
-		if err := d.mountVolume(v); err != nil {
-			return volume.Response{Err: err.Error()}
-		}
-	*/
-	/*
-		cmd := fmt.Sprintf("sshfs -oStrictHostKeyChecking=no %s %s", v.sshcmd, v.mountpoint)
-		if v.password != "" {
-			cmd = fmt.Sprintf("echo %s | %s -o workaround=rename -o password_stdin", v.password, cmd)
-		}
-		logrus.Debug(cmd)
-		return exec.Command("sh", "-c", cmd).Run() //ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
-	*/
-	//TODO gvfs-mount ftp://sapk@10.8.0.7
-	//TODO return volume.Response{Mountpoint: v.mountpoint}
+
+	//Example gvfs-mount ftp://sapk@10.8.0.7
+	cmd := fmt.Sprintf("gvfs-mount %s", v.url)
+	if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
+		return volume.Response{Err: err.Error()}
+	}
+
+	return volume.Response{Mountpoint: v.mountpoint}
 }
 
 func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
-	//TODO gvfs-mount -u ftp://sapk@10.8.0.7
+	//Example gvfs-mount -u ftp://sapk@10.8.0.7
+	d.Lock()
+	defer d.Unlock()
+	v, ok := d.volumes[r.Name]
+	if !ok {
+		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
+	}
+	if v.connections <= 1 {
+		cmd := fmt.Sprintf("gvfs-mount -u %s", v.url)
+		if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
+			return volume.Response{Err: err.Error()}
+		}
+		v.connections = 0
+	} else {
+		v.connections--
+	}
+
+	return volume.Response{}
 
 }
 

@@ -28,10 +28,10 @@ var (
 		Long:             longHelp,
 		PersistentPreRun: setupLogger,
 	}
-	cephCmd = &cobra.Command{
+	daemonCmd = &cobra.Command{
 		Use:   "daemon",
 		Short: "Run plugin in deamon mode",
-		Run:   exec,
+		Run:   daemonStart,
 	}
 	versionCmd = &cobra.Command{
 		Use:   "version",
@@ -47,15 +47,21 @@ var (
 func Start() {
 	setupFlags()
 	rootCmd.Long = fmt.Sprintf(longHelp, Version, Commit)
-	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(versionCmd, daemonCmd)
 	rootCmd.Execute()
 }
-func exec(cmd *cobra.Command, args []string) {
+func daemonStart(cmd *cobra.Command, args []string) {
 	//TODO get args
 	//TODO support -o of gvfsd-fuse
 	driver := newGVfsDriver(baseDir)
-	//h := volume.NewHandler(driver) //TODO subscribe and handle
-	//h.ServeUnix("root", "gvfs") //TODO
+	//newGVfsDriver(baseDir)
+	log.Debug(driver)
+	h := volume.NewHandler(driver) //TODO subscribe and handle
+	log.Debug(h)
+	err := h.ServeUnix("root", "gvfs") //TODO test
+	if err != nil {
+		log.Debug(err)
+	}
 }
 
 func setupFlags() {
