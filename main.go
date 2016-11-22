@@ -4,11 +4,13 @@ import (
 	"github.com/sapk/docker-volume-gvfs/driver"
 )
 
-var VERSION string = ""
-var BUILD_DATE string = ""
+var (
+	Version string
+	Commit  string
+)
 
 func main() {
-	driver.Version = VERSION
-	driver.BuildDate = BUILD_DATE
+	driver.Version = Version
+	driver.Commit = Commit
 	driver.Start()
 }

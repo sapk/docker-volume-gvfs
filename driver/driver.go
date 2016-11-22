@@ -12,24 +12,33 @@ const (
 	longHelp    = `
 docker-volume-gvfs (GVfs Volume Driver Plugin)
 Provides docker volume support for GVfs.
-== Version: %s - Built: %s ==
+== Version: %s - Commit: %s ==
 `
 )
 
 var (
-	Version   string = ""
-	BuildDate string = ""
-	rootCmd          = &cobra.Command{
+	Version string
+	Commit  string
+	rootCmd = &cobra.Command{
 		Use:              "docker-volume-gvfs",
 		Short:            "GVfs - Docker volume driver plugin",
 		Long:             longHelp,
 		PersistentPreRun: setupLogger,
 	}
+	versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "Display current version and build date",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("\nVersion: %s - Commit: %s\n\n", Version, Commit)
+		},
+	}
 )
 
 func Start() {
 	setupFlags()
-	rootCmd.Long = fmt.Sprintf(longHelp, Version, BuildDate)
+	rootCmd.Long = fmt.Sprintf(longHelp, Version, Commit)
+	rootCmd.AddCommand(versionCmd)
+	rootCmd.Execute()
 }
 
 func setupFlags() {
