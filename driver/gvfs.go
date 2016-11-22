@@ -142,6 +142,7 @@ func (d gvfsDriver) Path(r volume.Request) volume.Response {
 }
 
 func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
+	//TODO manage allready mountpoint allready exist before ? maybe init to +1 ?
 	log.Debugf("Entering Mount: %v", r)
 	d.Lock()
 	defer d.Unlock()
