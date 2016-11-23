@@ -5,12 +5,14 @@ import (
 )
 
 var (
-	Version string
-	Commit  string
+	version string
+	branch  string
+	commit  string
 )
 
 func main() {
-	driver.Version = Version
-	driver.Commit = Commit
+	driver.Version = version
+	driver.Commit = commit
+	driver.Branch = branch
 	driver.Start()
 }

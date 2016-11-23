@@ -10,19 +10,28 @@ import (
 )
 
 const (
+	//VerboseFlag flag to set more verbose level
 	VerboseFlag = "verbose"
+	//BasedirFlag flag to set the basedir of mounted volumes
 	BasedirFlag = "basedir"
 	longHelp    = `
 docker-volume-gvfs (GVfs Volume Driver Plugin)
 Provides docker volume support for GVfs.
-== Version: %s - Commit: %s ==
+== Version: %s - Branch: %s - Commit: %s ==
 `
 )
 
 var (
+	//Version version of running code
 	Version string
-	Commit  string
-	rootCmd = &cobra.Command{
+	//Branch branch of running code
+	Branch string
+	//Commit commit of running code
+	Commit string
+	//PluginAlias plugin alias name in docker
+	PluginAlias = "gvfs"
+	baseDir     = ""
+	rootCmd     = &cobra.Command{
 		Use:              "docker-volume-gvfs",
 		Short:            "GVfs - Docker volume driver plugin",
 		Long:             longHelp,
@@ -37,28 +46,26 @@ var (
 		Use:   "version",
 		Short: "Display current version and build date",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("\nVersion: %s - Commit: %s\n\n", Version, Commit)
+			fmt.Printf("\nVersion: %s - Branch: %s - Commit: %s\n\n", Version, Branch, Commit)
 		},
 	}
-	baseDir     = ""
-	PluginAlias = "gvfs"
 )
 
+//Start start the program
 func Start() {
 	setupFlags()
-	rootCmd.Long = fmt.Sprintf(longHelp, Version, Commit)
+	rootCmd.Long = fmt.Sprintf(longHelp, Version, Branch, Commit)
 	rootCmd.AddCommand(versionCmd, daemonCmd)
 	rootCmd.Execute()
 }
+
 func daemonStart(cmd *cobra.Command, args []string) {
-	//TODO get args
-	//TODO support -o of gvfsd-fuse
+	//TODO get additional args
 	driver := newGVfsDriver(baseDir)
-	//newGVfsDriver(baseDir)
 	log.Debug(driver)
-	h := volume.NewHandler(driver) //TODO subscribe and handle
+	h := volume.NewHandler(driver)
 	log.Debug(h)
-	err := h.ServeUnix("root", "gvfs") //TODO test
+	err := h.ServeUnix("root", PluginAlias)
 	if err != nil {
 		log.Debug(err)
 	}

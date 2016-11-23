@@ -13,3 +13,4 @@ script:
  - test -z "$(gofmt -s -l . | grep -v vendor/ | tee /dev/stderr)"
  - go list ./... | go test -v
  - make
+ - ./docker-volume-gvfs

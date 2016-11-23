@@ -44,8 +44,8 @@ func (d gvfsDriver) startFuseDeamon() error {
 func urlToMountPoint(root string, urlString string) (string, error) {
 	//Done ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
 	//TODO ftp://sapk@10.8.0.7:42 -> ftp:host=10.8.0.7,user=sapk,port=4242 ???
-	//TODO ftp://10.8.0.7 -> ftp:host=10.8.0.7 ???
-	//TODO ftp://sapk.fr -> ftp:host=sapk.fr ???
+	//TODO ftp://10.8.0.7 -> ftp:host=10.8.0.7
+	//TODO ftp://sapk.fr -> ftp:host=sapk.fr
 	//TODO other sheme
 	u, err := url.Parse(urlString)
 	if err != nil {
@@ -57,6 +57,7 @@ func urlToMountPoint(root string, urlString string) (string, error) {
 	}
 	return filepath.Join(root, name), nil
 }
+
 func (d gvfsDriver) Create(r volume.Request) volume.Response {
 	log.Debugf("Entering Create: name: %s, options %v", r.Name, r.Options)
 	d.Lock()
@@ -142,6 +143,7 @@ func (d gvfsDriver) Path(r volume.Request) volume.Response {
 }
 
 func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
+	//Execute gvfs-mount $params and check before for necessity to create mountpoint
 	//TODO manage allready mountpoint allready exist before ? maybe init to +1 ?
 	log.Debugf("Entering Mount: %v", r)
 	d.Lock()
@@ -169,8 +171,6 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 	if fi != nil && !fi.IsDir() {
 		return volume.Response{Err: fmt.Sprintf("%v already exist and it's not a directory", v.mountpoint)}
 	}
-
-	//Example gvfs-mount ftp://sapk@10.8.0.7
 	cmd := fmt.Sprintf("gvfs-mount %s", v.url)
 	if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
 		return volume.Response{Err: err.Error()}
@@ -180,7 +180,7 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 }
 
 func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
-	//Example gvfs-mount -u ftp://sapk@10.8.0.7
+	//Execute gvfs-mount -u $params
 	d.Lock()
 	defer d.Unlock()
 	v, ok := d.volumes[r.Name]
