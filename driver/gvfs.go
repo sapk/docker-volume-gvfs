@@ -38,7 +38,7 @@ func newGVfsDriver(root string) *gvfsDriver {
 }
 
 func (d gvfsDriver) startFuseDeamon() error {
-	//TODO check needed gvfsd + dbus + gvfsd-ftp
+	//TODO check needed gvfsd + dbus (eval `dbus-launch --sh-syntax`) + gvfsd-ftp
 	//TODO check if not allready started by other ? -> Normaly gvfsd-fuse block such so this like crash
 	// check if folder need to be created like in Mount
 	conn, err := dbus.New()
@@ -213,7 +213,9 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 		select {
 		case <-time.After(15 * time.Second):
 			p.Process.Kill()
-			return volume.Response{Err: fmt.Sprintf("The command %s timeout !", cmd)}
+			log.Debugf("out : %s", out.String())
+			log.Debugf("outErr : %s", outErr.String())
+			return volume.Response{Err: fmt.Sprintf("The command %s timeout", cmd)}
 		case <-donec:
 			log.Debugf("Password send and command %s return", cmd)
 			log.Debugf("out : %s", out.String())
@@ -228,6 +230,7 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 	return volume.Response{Mountpoint: v.mountpoint}
 }
 
+//TODO monitor for unmount to remount ?
 func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	//Execute gvfs-mount -u $params
 	log.Debugf("Entering Unmount: %v", r)
