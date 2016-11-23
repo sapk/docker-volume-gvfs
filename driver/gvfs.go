@@ -1,19 +1,23 @@
 package driver
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/coreos/go-systemd/dbus"
 	"github.com/docker/go-plugins-helpers/volume"
 )
 
 type gvfsVolume struct {
 	url         string
+	password    string
 	mountpoint  string
 	connections int
 }
@@ -34,11 +38,40 @@ func newGVfsDriver(root string) *gvfsDriver {
 }
 
 func (d gvfsDriver) startFuseDeamon() error {
+	//TODO check needed gvfsd + dbus + gvfsd-ftp
 	//TODO check if not allready started by other ? -> Normaly gvfsd-fuse block such so this like crash
-	//TODO check if folder need to be created like in Mount
-	cmd := fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes", d.root)
+	// check if folder need to be created like in Mount
+	conn, err := dbus.New()
+	defer conn.Close() //TODO
+
+	if err != nil {
+		return err
+	}
+	fi, err := os.Lstat(d.root)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(d.root, 0755); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+	if fi != nil && !fi.IsDir() {
+		return fmt.Errorf("%v already exist and it's not a directory", d.root)
+	}
+	cmd := fmt.Sprintf("/usr/lib/gvfs/gvfsd --no-fuse")
 	log.Debugf(cmd)
-	return exec.Command("sh", "-c", cmd).Start() //We execut in background
+	err = exec.Command("sh", "-c", cmd).Start() //We execut in background
+	if err != nil {
+		return err
+	}
+
+	cmd = fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes", d.root)
+	log.Debugf(cmd)
+	err = exec.Command("sh", "-c", cmd).Start() //We execut in background
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func urlToMountPoint(root string, urlString string) (string, error) {
@@ -73,6 +106,7 @@ func (d gvfsDriver) Create(r volume.Request) volume.Response {
 	}
 	v := &gvfsVolume{
 		url:         r.Options["url"],
+		password:    r.Options["password"], //TODO maybe error if not defined
 		mountpoint:  m,
 		connections: 0,
 	}
@@ -92,14 +126,8 @@ func (d gvfsDriver) Remove(r volume.Request) volume.Response {
 		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
 	}
 	if v.connections == 0 {
-		/** //Maybe a little to much to remove all ?
-			if err := os.RemoveAll(v.mountpoint); err != nil {
-				return volume.Response{Err: err.Error()}
-			}
-		/**/
 		delete(d.volumes, r.Name)
 		return volume.Response{}
-
 	}
 	return volume.Response{Err: fmt.Sprintf("volume %s is currently used by a container", r.Name)}
 }
@@ -159,21 +187,42 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 		return volume.Response{Mountpoint: v.mountpoint}
 	}
 
-	fi, err := os.Lstat(v.mountpoint)
-	if os.IsNotExist(err) {
-		if err := os.MkdirAll(v.mountpoint, 0755); err != nil {
+	cmd := fmt.Sprintf("gvfs-mount %s", v.url)
+	if v.password != "" {
+		p := exec.Command("sh", "-c", cmd)
+		in, err := p.StdinPipe()
+		if err != nil { //Get a input buffer
 			return volume.Response{Err: err.Error()}
 		}
-	} else if err != nil {
-		return volume.Response{Err: err.Error()}
-	}
+		var out bytes.Buffer
+		p.Stdout = &out
+		var outErr bytes.Buffer
+		p.Stderr = &outErr
 
-	if fi != nil && !fi.IsDir() {
-		return volume.Response{Err: fmt.Sprintf("%v already exist and it's not a directory", v.mountpoint)}
-	}
-	cmd := fmt.Sprintf("gvfs-mount %s", v.url)
-	if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
-		return volume.Response{Err: err.Error()}
+		if err := p.Start(); err != nil {
+			return volume.Response{Err: err.Error()}
+		}
+		in.Write([]byte(v.password)) //Send password to process
+
+		// wait or timeout
+		donec := make(chan error, 1)
+		go func() {
+			donec <- p.Wait()
+		}()
+
+		select {
+		case <-time.After(15 * time.Second):
+			p.Process.Kill()
+			return volume.Response{Err: fmt.Sprintf("The command %s timeout !", cmd)}
+		case <-donec:
+			log.Debugf("Password send and command %s return", cmd)
+			log.Debugf("out : %s", out.String())
+			log.Debugf("outErr : %s", outErr.String())
+		}
+	} else {
+		if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
+			return volume.Response{Err: err.Error()}
+		}
 	}
 
 	return volume.Response{Mountpoint: v.mountpoint}
@@ -181,6 +230,8 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 
 func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	//Execute gvfs-mount -u $params
+	log.Debugf("Entering Unmount: %v", r)
+
 	d.Lock()
 	defer d.Unlock()
 	v, ok := d.volumes[r.Name]

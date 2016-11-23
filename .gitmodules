@@ -25,3 +25,6 @@
 [submodule "vendor/golang.org/x/net"]
 	path = vendor/golang.org/x/net
 	url = https://go.googlesource.com/net
+[submodule "vendor/github.com/godbus/dbus"]
+	path = vendor/github.com/godbus/dbus
+	url = https://github.com/godbus/dbus

@@ -73,6 +73,7 @@ func daemonStart(cmd *cobra.Command, args []string) {
 
 func setupFlags() {
 	rootCmd.PersistentFlags().StringVar(&baseDir, BasedirFlag, filepath.Join(volume.DefaultDockerRootDirectory, PluginAlias), "Mounted volume base directory")
+	rootCmd.PersistentFlags().Bool(VerboseFlag, false, "Turns on verbose logging")
 }
 
 func setupLogger(cmd *cobra.Command, args []string) {
