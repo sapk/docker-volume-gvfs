@@ -16,3 +16,12 @@
 [submodule "vendor/github.com/coreos/go-systemd"]
 	path = vendor/github.com/coreos/go-systemd
 	url = https://github.com/coreos/go-systemd
+[submodule "vendor/github.com/coreos/pkg"]
+	path = vendor/github.com/coreos/pkg
+	url = https://github.com/coreos/pkg
+[submodule "vendor/github.com/opencontainers/runc"]
+	path = vendor/github.com/opencontainers/runc
+	url = https://github.com/opencontainers/runc
+[submodule "vendor/golang.org/x/net"]
+	path = vendor/golang.org/x/net
+	url = https://go.googlesource.com/net
