@@ -10,3 +10,9 @@
 [submodule "vendor/github.com/spf13/pflag"]
 	path = vendor/github.com/spf13/pflag
 	url = https://github.com/spf13/pflag
+[submodule "vendor/github.com/docker/go-connections"]
+	path = vendor/github.com/docker/go-connections
+	url = https://github.com/docker/go-connections
+[submodule "vendor/github.com/coreos/go-systemd"]
+	path = vendor/github.com/coreos/go-systemd
+	url = https://github.com/coreos/go-systemd
