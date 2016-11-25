@@ -7,12 +7,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/coreos/go-systemd/dbus"
 	"github.com/docker/go-plugins-helpers/volume"
+)
+
+const (
+	//MountTimeout timeout before killing a mount try in seconds
+	MountTimeout = 30
 )
 
 type gvfsVolume struct {
@@ -25,28 +30,51 @@ type gvfsVolume struct {
 type gvfsDriver struct {
 	sync.RWMutex
 	root    string
+	env     []string
 	volumes map[string]*gvfsVolume
 }
 
-func newGVfsDriver(root string) *gvfsDriver {
+func newGVfsDriver(root string, dbus string) *gvfsDriver {
 	d := &gvfsDriver{
 		root:    root,
+		env:     make([]string, 1), //os.Environ(), ///TODO maybe not init to empty ?
 		volumes: make(map[string]*gvfsVolume),
 	}
-	d.startFuseDeamon()
+	if dbus == "" {
+		// start needed dbus like (eval `dbus-launch --sh-syntax`) and get env variable
+		result, err := exec.Command("dbus-launch", "--sh-syntax").CombinedOutput() //DBUS_SESSION_BUS_ADDRESS='unix:abstract=/tmp/dbus-JHGXLpeJ6A,guid=25ab632502ebccd43cd403bc58388fab';\n ...
+		if err != nil {
+			panic(err)
+		}
+		env := string(result)
+		log.Debugf("dbus-launch --sh-syntax -> \n%s", env)
+		reDBus := regexp.MustCompile("DBUS_SESSION_BUS_ADDRESS='(.*?)';")
+		//rePID := regexp.MustCompile("DBUS_SESSION_BUS_PID=(.*?);")
+		matchDBuse := reDBus.FindStringSubmatch(env)
+		//matchPID := rePID.FindStringSubmatch(env)
+		dbus = matchDBuse[1]
+		//TODO plan to kill this add closing ?
+	}
+	d.env[0] = fmt.Sprintf("DBUS_SESSION_BUS_ADDRESS=%s", dbus)
+	err := d.startFuseDeamon()
+	if err != nil {
+		panic(err) //Something went wrong
+	}
 	return d
 }
 
-func (d gvfsDriver) startFuseDeamon() error {
-	//TODO check needed gvfsd + dbus (eval `dbus-launch --sh-syntax`) + gvfsd-ftp
-	//TODO check if not allready started by other ? -> Normaly gvfsd-fuse block such so this like crash
-	// check if folder need to be created like in Mount
-	conn, err := dbus.New()
-	defer conn.Close() //TODO
+// start deamon in context of this gvfs drive with custome env
+func (d gvfsDriver) startCmd(cmd string) error {
+	log.Debugf(cmd)
+	c := exec.Command("sh", "-c", cmd)
+	c.Env = d.env
+	return c.Start()
+}
 
-	if err != nil {
-		return err
-	}
+func (d gvfsDriver) startFuseDeamon() error {
+	//TODO check needed gvfsd + gvfsd-ftp Maybe allready on dbus ?
+	// Normaly gvfsd-fuse block such so this like crash but global ?
+
 	fi, err := os.Lstat(d.root)
 	if os.IsNotExist(err) {
 		if err := os.MkdirAll(d.root, 0755); err != nil {
@@ -58,19 +86,17 @@ func (d gvfsDriver) startFuseDeamon() error {
 	if fi != nil && !fi.IsDir() {
 		return fmt.Errorf("%v already exist and it's not a directory", d.root)
 	}
-	cmd := fmt.Sprintf("/usr/lib/gvfs/gvfsd --no-fuse")
-	log.Debugf(cmd)
-	err = exec.Command("sh", "-c", cmd).Start() //We execut in background
-	if err != nil {
-		return err
-	}
 
-	cmd = fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes", d.root)
-	log.Debugf(cmd)
-	err = exec.Command("sh", "-c", cmd).Start() //We execut in background
+	err = d.startCmd("/usr/lib/gvfs/gvfsd --no-fuse") //Start global deamon
 	if err != nil {
 		return err
 	}
+	///usr/lib/gvfs/gvfsd-fuse /var/lib/docker-volumes/gvfs -f -o big_writes,use_ino,allow_other,default_permissions,auto_cache,umask=0022
+	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes,use_ino,allow_other,auto_cache,umask=0022", d.root)) //Start ftp handler
+	if err != nil {
+		return err
+	}
+	//TODO try to start other handler
 	return nil
 }
 
@@ -189,7 +215,8 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 
 	cmd := fmt.Sprintf("gvfs-mount %s", v.url)
 	if v.password != "" {
-		p := exec.Command("sh", "-c", cmd)
+		p := exec.Command("sh", "-c", cmd) //TODO refactor
+		p.Env = d.env
 		in, err := p.StdinPipe()
 		if err != nil { //Get a input buffer
 			return volume.Response{Err: err.Error()}
@@ -211,7 +238,7 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 		}()
 
 		select {
-		case <-time.After(15 * time.Second):
+		case <-time.After(MountTimeout * time.Second):
 			p.Process.Kill()
 			log.Debugf("out : %s", out.String())
 			log.Debugf("outErr : %s", outErr.String())
@@ -222,7 +249,9 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 			log.Debugf("outErr : %s", outErr.String())
 		}
 	} else {
-		if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
+		p := exec.Command("sh", "-c", cmd) //TODO refactor
+		p.Env = d.env
+		if err := p.Run(); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
 	}
@@ -243,7 +272,9 @@ func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	}
 	if v.connections <= 1 {
 		cmd := fmt.Sprintf("gvfs-mount -u %s", v.url)
-		if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
+		p := exec.Command("sh", "-c", cmd) //TODO refactor
+		p.Env = d.env
+		if err := p.Run(); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
 		v.connections = 0
@@ -252,7 +283,6 @@ func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	}
 
 	return volume.Response{}
-
 }
 
 func (d gvfsDriver) Capabilities(r volume.Request) volume.Response {

@@ -2,6 +2,7 @@ package driver
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
@@ -12,6 +13,10 @@ import (
 const (
 	//VerboseFlag flag to set more verbose level
 	VerboseFlag = "verbose"
+	//DBusFlag flag to set DBus path
+	DBusFlag = "dbus"
+	//EnvDBus env to setor get from session DBus path
+	EnvDBus = "DBUS_SESSION_BUS_ADDRESS"
 	//BasedirFlag flag to set the basedir of mounted volumes
 	BasedirFlag = "basedir"
 	longHelp    = `
@@ -59,9 +64,18 @@ func Start() {
 	rootCmd.Execute()
 }
 
+func typeOrEnv(cmd *cobra.Command, flag, envname string) string {
+	val, _ := cmd.Flags().GetString(flag)
+	if val == "" {
+		val = os.Getenv(envname)
+	}
+	return val
+}
+
 func daemonStart(cmd *cobra.Command, args []string) {
 	//TODO get additional args
-	driver := newGVfsDriver(baseDir)
+	dbus := typeOrEnv(cmd, DBusFlag, EnvDBus)
+	driver := newGVfsDriver(baseDir, dbus)
 	log.Debug(driver)
 	h := volume.NewHandler(driver)
 	log.Debug(h)
@@ -72,8 +86,10 @@ func daemonStart(cmd *cobra.Command, args []string) {
 }
 
 func setupFlags() {
-	rootCmd.PersistentFlags().StringVar(&baseDir, BasedirFlag, filepath.Join(volume.DefaultDockerRootDirectory, PluginAlias), "Mounted volume base directory")
 	rootCmd.PersistentFlags().Bool(VerboseFlag, false, "Turns on verbose logging")
+	rootCmd.PersistentFlags().StringVar(&baseDir, BasedirFlag, filepath.Join(volume.DefaultDockerRootDirectory, PluginAlias), "Mounted volume base directory")
+
+	daemonCmd.Flags().StringP(DBusFlag, "d", "", "DBus address to use for gvfs.  Can also set default environment DBUS_SESSION_BUS_ADDRESS")
 }
 
 func setupLogger(cmd *cobra.Command, args []string) {
