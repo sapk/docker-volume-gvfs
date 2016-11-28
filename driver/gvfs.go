@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,7 +38,7 @@ type gvfsDriver struct {
 func newGVfsDriver(root string, dbus string) *gvfsDriver {
 	d := &gvfsDriver{
 		root:    root,
-		env:     make([]string, 1), //os.Environ(), ///TODO maybe not init to empty ?
+		env:     make([]string, 1),
 		volumes: make(map[string]*gvfsVolume),
 	}
 	if dbus == "" {
@@ -63,12 +64,23 @@ func newGVfsDriver(root string, dbus string) *gvfsDriver {
 	return d
 }
 
+func setEnv(cmd string, env []string) *exec.Cmd {
+	c := exec.Command("sh", "-c", cmd)
+	//c := exec.Command(strings.Split(cmd, " ")) //TODO better
+	c.Env = env
+	return c
+}
+
 // start deamon in context of this gvfs drive with custome env
 func (d gvfsDriver) startCmd(cmd string) error {
 	log.Debugf(cmd)
-	c := exec.Command("sh", "-c", cmd)
-	c.Env = d.env
-	return c.Start()
+	return setEnv(cmd, d.env).Start()
+}
+
+// run deamon in context of this gvfs drive with custome env
+func (d gvfsDriver) runCmd(cmd string) error {
+	log.Debugf(cmd)
+	return setEnv(cmd, d.env).Run()
 }
 
 func (d gvfsDriver) startFuseDeamon() error {
@@ -91,7 +103,7 @@ func (d gvfsDriver) startFuseDeamon() error {
 	if err != nil {
 		return err
 	}
-	///usr/lib/gvfs/gvfsd-fuse /var/lib/docker-volumes/gvfs -f -o big_writes,use_ino,allow_other,default_permissions,auto_cache,umask=0022
+
 	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes,use_ino,allow_other,auto_cache,umask=0022", d.root)) //Start ftp handler
 	if err != nil {
 		return err
@@ -102,9 +114,11 @@ func (d gvfsDriver) startFuseDeamon() error {
 
 func urlToMountPoint(root string, urlString string) (string, error) {
 	//Done ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
+	//Done ftp://10.8.0.7 -> ftp:host=10.8.0.7
+	//Done ftp://sapk.fr -> ftp:host=sapk.fr
 	//TODO ftp://sapk@10.8.0.7:42 -> ftp:host=10.8.0.7,user=sapk,port=4242 ???
-	//TODO ftp://10.8.0.7 -> ftp:host=10.8.0.7
-	//TODO ftp://sapk.fr -> ftp:host=sapk.fr
+	// ftp://10.8.0.7 -> ftp:host=10.8.0.7
+	// ftp://sapk.fr -> ftp:host=sapk.fr
 	//TODO other sheme
 	u, err := url.Parse(urlString)
 	if err != nil {
@@ -132,7 +146,7 @@ func (d gvfsDriver) Create(r volume.Request) volume.Response {
 	}
 	v := &gvfsVolume{
 		url:         r.Options["url"],
-		password:    r.Options["password"], //TODO maybe error if not defined
+		password:    r.Options["password"],
 		mountpoint:  m,
 		connections: 0,
 	}
@@ -197,8 +211,6 @@ func (d gvfsDriver) Path(r volume.Request) volume.Response {
 }
 
 func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
-	//Execute gvfs-mount $params and check before for necessity to create mountpoint
-	//TODO manage allready mountpoint allready exist before ? maybe init to +1 ?
 	log.Debugf("Entering Mount: %v", r)
 	d.Lock()
 	defer d.Unlock()
@@ -215,43 +227,49 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 
 	cmd := fmt.Sprintf("gvfs-mount %s", v.url)
 	if v.password != "" {
-		p := exec.Command("sh", "-c", cmd) //TODO refactor
-		p.Env = d.env
-		in, err := p.StdinPipe()
+		p := setEnv(cmd, d.env)
+		inStd, err := p.StdinPipe()
 		if err != nil { //Get a input buffer
 			return volume.Response{Err: err.Error()}
 		}
-		var out bytes.Buffer
-		p.Stdout = &out
-		var outErr bytes.Buffer
-		p.Stderr = &outErr
+		var outStd bytes.Buffer
+		p.Stdout = &outStd
+		var errStd bytes.Buffer
+		p.Stderr = &errStd
 
 		if err := p.Start(); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
-		in.Write([]byte(v.password + "\n")) //Send password to process
+		inStd.Write([]byte(v.password + "\n")) //Send password to process + Send return line
 
 		// wait or timeout
 		donec := make(chan error, 1)
 		go func() {
-			donec <- p.Wait()
+			donec <- p.Wait() //Process finish
 		}()
-
 		select {
 		case <-time.After(MountTimeout * time.Second):
+			sOut := outStd.String()
+			sErr := errStd.String()
 			p.Process.Kill()
-			log.Debugf("out : %s", out.String())
-			log.Debugf("outErr : %s", outErr.String())
+			log.Debugf("out : %s", sOut)
+			log.Debugf("outErr : %s", sErr)
 			return volume.Response{Err: fmt.Sprintf("The command %s timeout", cmd)}
 		case <-donec:
+			sOut := outStd.String()
+			sErr := errStd.String()
 			log.Debugf("Password send and command %s return", cmd)
-			log.Debugf("out : %s", out.String())
-			log.Debugf("outErr : %s", outErr.String())
+			log.Debugf("out : %s", sOut)
+			log.Debugf("outErr : %s", sErr)
+			// handle erros like : "Error mounting location: Location is already mounted" or Error mounting location: Could not connect to 10.8.0.7: No route to host
+			if strings.Contains(sErr, "Error mounting location") {
+				return volume.Response{Err: fmt.Sprintf("Error mounting location : %s", sErr)}
+				//log.Debugf("mountpoint '%s' seems to be allready mounted by a other process before this driver, nb connections :%d", v.mountpoint, v.connections)
+			}
+			break
 		}
 	} else {
-		p := exec.Command("sh", "-c", cmd) //TODO refactor
-		p.Env = d.env
-		if err := p.Run(); err != nil {
+		if err := d.runCmd(cmd); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
 	}
@@ -259,7 +277,7 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 	return volume.Response{Mountpoint: v.mountpoint}
 }
 
-//TODO monitor for unmount to remount ?
+//TODO Monitor for unmount to remount ?
 func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	//Execute gvfs-mount -u $params
 	log.Debugf("Entering Unmount: %v", r)
@@ -272,9 +290,7 @@ func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	}
 	if v.connections <= 1 {
 		cmd := fmt.Sprintf("gvfs-mount -u %s", v.url)
-		p := exec.Command("sh", "-c", cmd) //TODO refactor
-		p.Env = d.env
-		if err := p.Run(); err != nil {
+		if err := d.runCmd(cmd); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
 		v.connections = 0
