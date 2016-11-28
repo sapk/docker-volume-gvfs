@@ -41,5 +41,6 @@ docker run -v test:/mnt:nocopy --rm -ti ubuntu
  - https://github.com/vieux/docker-volume-sshfs/
 
 ## TODO :
+ - Add systemctl service example file
+ - Create AUR package
  - Add test for differents backends
- - Add method to pass password
