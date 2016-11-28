@@ -3,7 +3,6 @@ package driver
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"os/exec"
@@ -39,7 +38,7 @@ type gvfsDriver struct {
 func newGVfsDriver(root string, dbus string) *gvfsDriver {
 	d := &gvfsDriver{
 		root:    root,
-		env:     make([]string, 1), //os.Environ(), ///TODO maybe not init to empty ?
+		env:     make([]string, 1),
 		volumes: make(map[string]*gvfsVolume),
 	}
 	if dbus == "" {
@@ -104,7 +103,7 @@ func (d gvfsDriver) startFuseDeamon() error {
 	if err != nil {
 		return err
 	}
-	///usr/lib/gvfs/gvfsd-fuse /var/lib/docker-volumes/gvfs -f -o big_writes,use_ino,allow_other,default_permissions,auto_cache,umask=0022
+
 	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes,use_ino,allow_other,auto_cache,umask=0022", d.root)) //Start ftp handler
 	if err != nil {
 		return err
@@ -115,9 +114,11 @@ func (d gvfsDriver) startFuseDeamon() error {
 
 func urlToMountPoint(root string, urlString string) (string, error) {
 	//Done ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
+	//Done ftp://10.8.0.7 -> ftp:host=10.8.0.7
+	//Done ftp://sapk.fr -> ftp:host=sapk.fr
 	//TODO ftp://sapk@10.8.0.7:42 -> ftp:host=10.8.0.7,user=sapk,port=4242 ???
-	//TODO ftp://10.8.0.7 -> ftp:host=10.8.0.7
-	//TODO ftp://sapk.fr -> ftp:host=sapk.fr
+	// ftp://10.8.0.7 -> ftp:host=10.8.0.7
+	// ftp://sapk.fr -> ftp:host=sapk.fr
 	//TODO other sheme
 	u, err := url.Parse(urlString)
 	if err != nil {
@@ -145,7 +146,7 @@ func (d gvfsDriver) Create(r volume.Request) volume.Response {
 	}
 	v := &gvfsVolume{
 		url:         r.Options["url"],
-		password:    r.Options["password"], //TODO maybe error if not defined
+		password:    r.Options["password"],
 		mountpoint:  m,
 		connections: 0,
 	}
@@ -210,8 +211,6 @@ func (d gvfsDriver) Path(r volume.Request) volume.Response {
 }
 
 func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
-	//Execute gvfs-mount $params and check before for necessity to create mountpoint
-	//TODO manage allready mountpoint allready exist before ? maybe init to +1 ?
 	log.Debugf("Entering Mount: %v", r)
 	d.Lock()
 	defer d.Unlock()
@@ -233,24 +232,10 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 		if err != nil { //Get a input buffer
 			return volume.Response{Err: err.Error()}
 		}
-		/*
-			outStd, err := p.StdoutPipe()
-			if err != nil {
-				return volume.Response{Err: err.Error()}
-			}
-			outErr, err := p.StderrPipe()
-			if err != nil {
-				return volume.Response{Err: err.Error()}
-			}
-			rOut := bufio.NewReader(outStd)
-			rErr := bufio.NewReader(outErr)
-			//*/
-		//*
-		var out bytes.Buffer
-		p.Stdout = &out
-		var outErr bytes.Buffer
-		p.Stderr = &outErr
-		//*/
+		var outStd bytes.Buffer
+		p.Stdout = &outStd
+		var errStd bytes.Buffer
+		p.Stderr = &errStd
 
 		if err := p.Start(); err != nil {
 			return volume.Response{Err: err.Error()}
@@ -263,36 +248,25 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 			donec <- p.Wait() //Process finish
 		}()
 		select {
-		case <-donec:
-			//sOut := readerToString(rOut)
-			//sErr := readerToString(rErr)
-			sOut := out.String()
-			sErr := out.String()
-			log.Debugf("Password send and command %s return", cmd)
-			log.Debugf("out : %s", sOut)
-			log.Debugf("outErr : %s", sErr)
-			//TODO handle erros : mount point allready exist "Error mounting location: Location is already mounted"
-			// Error mounting location: Could not connect to 10.8.0.7: No route to host
-			/*
-				tmp, err := p.CombinedOutput()
-				if err != nil {
-					return volume.Response{Err: err.Error()}
-				}
-				if strings.Contains(string(tmp), "Location is already mounted") {
-			*/
-			if strings.Contains(sOut, "Location is already mounted") || strings.Contains(sErr, "Location is already mounted") {
-				log.Debugf("mountpoint '%s' seems to be allready mounted by a other process before this driver, nb connections :%d", v.mountpoint, v.connections)
-			}
-			break
 		case <-time.After(MountTimeout * time.Second):
-			//sOut := readerToString(rOut)
-			//sErr := readerToString(rErr)
-			sOut := out.String()
-			sErr := out.String()
+			sOut := outStd.String()
+			sErr := errStd.String()
 			p.Process.Kill()
 			log.Debugf("out : %s", sOut)
 			log.Debugf("outErr : %s", sErr)
 			return volume.Response{Err: fmt.Sprintf("The command %s timeout", cmd)}
+		case <-donec:
+			sOut := outStd.String()
+			sErr := errStd.String()
+			log.Debugf("Password send and command %s return", cmd)
+			log.Debugf("out : %s", sOut)
+			log.Debugf("outErr : %s", sErr)
+			// handle erros like : "Error mounting location: Location is already mounted" or Error mounting location: Could not connect to 10.8.0.7: No route to host
+			if strings.Contains(sErr, "Error mounting location") {
+				return volume.Response{Err: fmt.Sprintf("Error mounting location : %s", sErr)}
+				//log.Debugf("mountpoint '%s' seems to be allready mounted by a other process before this driver, nb connections :%d", v.mountpoint, v.connections)
+			}
+			break
 		}
 	} else {
 		if err := d.runCmd(cmd); err != nil {
@@ -303,53 +277,7 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 	return volume.Response{Mountpoint: v.mountpoint}
 }
 
-func readerToString(buf io.Reader) string {
-	b := new(bytes.Buffer)
-	b.ReadFrom(buf)
-	return b.String()
-}
-
-/*
-// Ugly hack, this is bufio.ScanLines with ? added as an other delimiter :D
-//http://stackoverflow.com/questions/27322722/interact-with-external-application-from-within-code-golang
-func passScanner(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.IndexByte(data, '\n'); i >= 0 {
-		// We have a full newline-terminated line.
-		fmt.Printf("nn\n")
-		return i + 1, data[0:i], nil
-	}
-	if i := bytes.IndexByte(data, ':'); i >= 0 {
-		// We have a full ?-terminated line.
-		return i + 1, data[0:i], nil
-	}
-	// If we're at EOF, we have a final, non-terminated line. Return it.
-	if atEOF {
-		return len(data), data, nil
-	}
-	// Request more data.
-	return 0, nil, nil
-}
-
-//TODO
-//TODO use channel to analyze string iterative
-func read(buf io.Reader, stop chan bool) {
-	scanner := bufio.NewScanner(buf)
-	//scanner.Split(bufio.ScanLines)
-	scanner.Split(passScanner)
-	for scanner.Scan() {
-		fmt.Println("Performed Scan")
-		fmt.Println(scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
-	}
-	stop <- true
-}
-*/
-//TODO monitor for unmount to remount ?
+//TODO Monitor for unmount to remount ?
 func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	//Execute gvfs-mount -u $params
 	log.Debugf("Entering Unmount: %v", r)
