@@ -229,7 +229,7 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 		if err := p.Start(); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
-		in.Write([]byte(v.password)) //Send password to process
+		in.Write([]byte(v.password + "\n")) //Send password to process
 
 		// wait or timeout
 		donec := make(chan error, 1)
