@@ -108,7 +108,6 @@ func (d gvfsDriver) startFuseDeamon() error {
 	if err != nil {
 		return err
 	}
-	//TODO try to start other handler
 	return nil
 }
 
@@ -116,16 +115,22 @@ func urlToMountPoint(root string, urlString string) (string, error) {
 	//Done ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
 	//Done ftp://10.8.0.7 -> ftp:host=10.8.0.7
 	//Done ftp://sapk.fr -> ftp:host=sapk.fr
-	//TODO ftp://sapk@10.8.0.7:42 -> ftp:host=10.8.0.7,user=sapk,port=4242 ???
-	// ftp://10.8.0.7 -> ftp:host=10.8.0.7
-	// ftp://sapk.fr -> ftp:host=sapk.fr
+	//Done ftp://sapk@10.8.0.7:2121 -> ftp:host=10.8.0.7,port=2121,user=sapk
+	//Done ftp://sapk@10.8.0.7:21 -> ftp:host=10.8.0.7,user=sapk
 	//TODO other sheme
 	u, err := url.Parse(urlString)
 	if err != nil {
 		return "", err
 	}
 	name := u.Scheme + ":host=" + u.Host
-	if u.User != nil { //TODO test it
+	if strings.Contains(u.Host, ":") {
+		el := strings.Split(u.Host, ":")
+		name = u.Scheme + ":host=" + el[0] //Default don't show port
+		if u.Scheme == "ftp" && el[1] != "21" {
+			name = u.Scheme + ":host=" + el[0] + ",port=" + el[1] //add port if not default
+		}
+	}
+	if u.User != nil {
 		name += ",user=" + u.User.Username()
 	}
 	return filepath.Join(root, name), nil
@@ -181,6 +186,7 @@ func (d gvfsDriver) List(r volume.Request) volume.Response {
 	var vols []*volume.Volume
 	for name, v := range d.volumes {
 		vols = append(vols, &volume.Volume{Name: name, Mountpoint: v.mountpoint})
+		log.Debugf("Volume found: %s", v)
 	}
 	return volume.Response{Volumes: vols}
 }
@@ -195,6 +201,7 @@ func (d gvfsDriver) Get(r volume.Request) volume.Response {
 		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
 	}
 
+	log.Debugf("Volume found: %s", v)
 	return volume.Response{Volume: &volume.Volume{Name: r.Name, Mountpoint: v.mountpoint}}
 }
 
@@ -207,6 +214,7 @@ func (d gvfsDriver) Path(r volume.Request) volume.Response {
 	if !ok {
 		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
 	}
+	log.Debugf("Volume found: %s", v)
 	return volume.Response{Mountpoint: v.mountpoint}
 }
 
@@ -264,8 +272,8 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 			// handle erros like : "Error mounting location: Location is already mounted" or Error mounting location: Could not connect to 10.8.0.7: No route to host
 			if strings.Contains(sErr, "Error mounting location") {
 				return volume.Response{Err: fmt.Sprintf("Error mounting location : %s", sErr)}
-				//log.Debugf("mountpoint '%s' seems to be allready mounted by a other process before this driver, nb connections :%d", v.mountpoint, v.connections)
 			}
+			v.connections++
 			break
 		}
 	} else {
