@@ -3,11 +3,13 @@ package driver
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -63,12 +65,23 @@ func newGVfsDriver(root string, dbus string) *gvfsDriver {
 	return d
 }
 
+func setEnv(cmd string, env []string) *exec.Cmd {
+	c := exec.Command("sh", "-c", cmd)
+	//c := exec.Command(strings.Split(cmd, " ")) //TODO better
+	c.Env = env
+	return c
+}
+
 // start deamon in context of this gvfs drive with custome env
 func (d gvfsDriver) startCmd(cmd string) error {
 	log.Debugf(cmd)
-	c := exec.Command("sh", "-c", cmd)
-	c.Env = d.env
-	return c.Start()
+	return setEnv(cmd, d.env).Start()
+}
+
+// run deamon in context of this gvfs drive with custome env
+func (d gvfsDriver) runCmd(cmd string) error {
+	log.Debugf(cmd)
+	return setEnv(cmd, d.env).Run()
 }
 
 func (d gvfsDriver) startFuseDeamon() error {
@@ -215,43 +228,74 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 
 	cmd := fmt.Sprintf("gvfs-mount %s", v.url)
 	if v.password != "" {
-		p := exec.Command("sh", "-c", cmd) //TODO refactor
-		p.Env = d.env
-		in, err := p.StdinPipe()
+		p := setEnv(cmd, d.env)
+		inStd, err := p.StdinPipe()
 		if err != nil { //Get a input buffer
 			return volume.Response{Err: err.Error()}
 		}
+		/*
+			outStd, err := p.StdoutPipe()
+			if err != nil {
+				return volume.Response{Err: err.Error()}
+			}
+			outErr, err := p.StderrPipe()
+			if err != nil {
+				return volume.Response{Err: err.Error()}
+			}
+			rOut := bufio.NewReader(outStd)
+			rErr := bufio.NewReader(outErr)
+			//*/
+		//*
 		var out bytes.Buffer
 		p.Stdout = &out
 		var outErr bytes.Buffer
 		p.Stderr = &outErr
+		//*/
 
 		if err := p.Start(); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
-		in.Write([]byte(v.password)) //Send password to process
+		inStd.Write([]byte(v.password + "\n")) //Send password to process + Send return line
 
 		// wait or timeout
 		donec := make(chan error, 1)
 		go func() {
-			donec <- p.Wait()
+			donec <- p.Wait() //Process finish
 		}()
-
 		select {
-		case <-time.After(MountTimeout * time.Second):
-			p.Process.Kill()
-			log.Debugf("out : %s", out.String())
-			log.Debugf("outErr : %s", outErr.String())
-			return volume.Response{Err: fmt.Sprintf("The command %s timeout", cmd)}
 		case <-donec:
+			//sOut := readerToString(rOut)
+			//sErr := readerToString(rErr)
+			sOut := out.String()
+			sErr := out.String()
 			log.Debugf("Password send and command %s return", cmd)
-			log.Debugf("out : %s", out.String())
-			log.Debugf("outErr : %s", outErr.String())
+			log.Debugf("out : %s", sOut)
+			log.Debugf("outErr : %s", sErr)
+			//TODO handle erros : mount point allready exist "Error mounting location: Location is already mounted"
+			// Error mounting location: Could not connect to 10.8.0.7: No route to host
+			/*
+				tmp, err := p.CombinedOutput()
+				if err != nil {
+					return volume.Response{Err: err.Error()}
+				}
+				if strings.Contains(string(tmp), "Location is already mounted") {
+			*/
+			if strings.Contains(sOut, "Location is already mounted") || strings.Contains(sErr, "Location is already mounted") {
+				log.Debugf("mountpoint '%s' seems to be allready mounted by a other process before this driver, nb connections :%d", v.mountpoint, v.connections)
+			}
+			break
+		case <-time.After(MountTimeout * time.Second):
+			//sOut := readerToString(rOut)
+			//sErr := readerToString(rErr)
+			sOut := out.String()
+			sErr := out.String()
+			p.Process.Kill()
+			log.Debugf("out : %s", sOut)
+			log.Debugf("outErr : %s", sErr)
+			return volume.Response{Err: fmt.Sprintf("The command %s timeout", cmd)}
 		}
 	} else {
-		p := exec.Command("sh", "-c", cmd) //TODO refactor
-		p.Env = d.env
-		if err := p.Run(); err != nil {
+		if err := d.runCmd(cmd); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
 	}
@@ -259,6 +303,52 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 	return volume.Response{Mountpoint: v.mountpoint}
 }
 
+func readerToString(buf io.Reader) string {
+	b := new(bytes.Buffer)
+	b.ReadFrom(buf)
+	return b.String()
+}
+
+/*
+// Ugly hack, this is bufio.ScanLines with ? added as an other delimiter :D
+//http://stackoverflow.com/questions/27322722/interact-with-external-application-from-within-code-golang
+func passScanner(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// We have a full newline-terminated line.
+		fmt.Printf("nn\n")
+		return i + 1, data[0:i], nil
+	}
+	if i := bytes.IndexByte(data, ':'); i >= 0 {
+		// We have a full ?-terminated line.
+		return i + 1, data[0:i], nil
+	}
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+	// Request more data.
+	return 0, nil, nil
+}
+
+//TODO
+//TODO use channel to analyze string iterative
+func read(buf io.Reader, stop chan bool) {
+	scanner := bufio.NewScanner(buf)
+	//scanner.Split(bufio.ScanLines)
+	scanner.Split(passScanner)
+	for scanner.Scan() {
+		fmt.Println("Performed Scan")
+		fmt.Println(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+	}
+	stop <- true
+}
+*/
 //TODO monitor for unmount to remount ?
 func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	//Execute gvfs-mount -u $params
@@ -272,9 +362,7 @@ func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	}
 	if v.connections <= 1 {
 		cmd := fmt.Sprintf("gvfs-mount -u %s", v.url)
-		p := exec.Command("sh", "-c", cmd) //TODO refactor
-		p.Env = d.env
-		if err := p.Run(); err != nil {
+		if err := d.runCmd(cmd); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
 		v.connections = 0
