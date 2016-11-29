@@ -1,0 +1,11 @@
+[Unit]
+Description=Docker GvFS (ftp, ssh, smb, ...) Volume Plugin
+Documentation=https://github.com/sapk/docker-volume-gvfs
+After=network.target
+Before=docker.service
+
+[Service]
+ExecStart=/usr/bin/docker-volume-gvfs daemon
+
+[Install]
+WantedBy=multi-user.target
