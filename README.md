@@ -41,5 +41,6 @@ docker run -v test:/mnt:nocopy --rm -ti ubuntu
  - https://github.com/vieux/docker-volume-sshfs/
 
 ## TODO :
- - Add test for differents backends
+ - Implement sftp, smb, ftps, ...
+ - Add test for differents backends (ftp,sftp,smb, ftps, ...)
  - Add method to pass password
