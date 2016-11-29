@@ -3,6 +3,7 @@ COMMIT=$(shell git log -q -1 | head -n 1 | cut -f2 -d' ')
 BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 
 GO15VENDOREXPERIMENT=1
+GOPATH ?= $(GOPATH:):./vendor
 
 all: deps compile
 
@@ -14,5 +15,5 @@ format:
 	gofmt -s -w -l .
 
 deps:
-	go get -v
+	go get -dv
 #	go get -v ./...
