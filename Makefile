@@ -15,5 +15,5 @@ format:
 	gofmt -s -w -l .
 
 deps:
-	go get -dv
+	go get -d -v
 #	go get -v ./...
