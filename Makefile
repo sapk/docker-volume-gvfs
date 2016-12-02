@@ -7,7 +7,7 @@ GOPATH ?= $(GOPATH:):./vendor
 #GOOS=linux
 
 
-all: deps compile compress
+all: deps compile
 
 compile:
 	#go build -ldflags "-X main.version=v${VERSION} -X main.branch=${BRANCH} -X main.commit=${COMMIT}"
