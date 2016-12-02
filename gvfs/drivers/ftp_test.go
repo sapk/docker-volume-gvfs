@@ -5,6 +5,20 @@ import (
 	"testing"
 )
 
+func TestFTPId(t *testing.T) {
+	tmp := FTPVolumeDriver{}
+	id := tmp.id()
+	if id != FTP {
+		t.Error("Expected FTP(", FTP, "), got ", id)
+	}
+}
+func TestFTPIdName(t *testing.T) {
+	tmp := FTPVolumeDriver{}
+	name := tmp.id().String()
+	if name != "ftp" {
+		t.Error("Expected 'ftp', got ", name)
+	}
+}
 func TestSimpleIPURL(t *testing.T) {
 	u, _ := url.Parse("ftp://10.0.0.1")
 	tmp := FTPVolumeDriver{url: u}

@@ -20,6 +20,9 @@ compress:
 format:
 	gofmt -s -w -l .
 
+test:
+	go test -race -coverprofile=coverage.txt -covermode=atomic ./gvfs/drivers
+
 deps:
 	go get -d -v
 #	go get -v ./...
