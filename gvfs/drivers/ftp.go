@@ -23,12 +23,6 @@ func (d FTPVolumeDriver) isAvailable() bool {
 }
 
 func (d FTPVolumeDriver) mountpoint() (string, error) {
-	//TODO test ftps
-	//Done ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
-	//Done ftp://10.8.0.7 -> ftp:host=10.8.0.7
-	//Done ftp://sapk.fr -> ftp:host=sapk.fr
-	//Done ftp://sapk@10.8.0.7:2121 -> ftp:host=10.8.0.7,port=2121,user=sapk
-	//Done ftp://sapk@10.8.0.7:21 -> ftp:host=10.8.0.7,user=sapk
 	mount := d.url.Scheme + ":host=" + d.url.Host
 	if strings.Contains(d.url.Host, ":") {
 		el := strings.Split(d.url.Host, ":")
