@@ -5,15 +5,23 @@ addons:
     packages:
     - upx-ucl
 go:
- - 1.6
- - 1.7
- - tip
+- 1.6
+- 1.7
+- tip
 install:
- - go get github.com/golang/lint/golint
+- go get github.com/golang/lint/golint
 script:
- - go vet ./... || echo "Something could be improved !"
- - test -z "$(golint ./... | grep -v vendor/ | tee /dev/stderr)"
- - test -z "$(gofmt -s -l . | grep -v vendor/ | tee /dev/stderr)"
- - go list ./... | go test -v
- - make
- - ./docker-volume-gvfs
+- go vet ./... || echo "Something could be improved !"
+- test -z "$(golint ./... | grep -v vendor/ | tee /dev/stderr)"
+- test -z "$(gofmt -s -l . | grep -v vendor/ | tee /dev/stderr)"
+- go list ./... | go test -v
+- make
+- ./docker-volume-gvfs
+deploy:
+  provider: releases
+  api_key:
+    secure: Mn5jPnIosAJeRD6WDbQBkwIlI7zShQd7bxrs0t0/dVxTTI/vOjAQ/n2UtMWBEc/zvc7s1mmdbtTW2UlcI8r+LFig/gp/Fsd9Cyfap45hOtG0660ockIwMJEBSJemnT5Z4UuY4tGlMtM9CH7K316VtAdHNVBka4+wnTPoNhv6SQMYjffajhRRLlNgrDFkjdJ8A/E5GfCfov0bX++GqjS6QKVTBnUwLfSIt48xXOJIgfpgLZPos3NaiBG/vGjsLlrhDb8YPnbe/ITO/1ZymBbY4sEn2WAeflXG5wGYUGnPCE3ix2VwC6PnfWEqJDW7ZzpHnAUBu+V/f/S+b3r2O50vLcPuQR8zxxs//ei/RRoIRvMiTycFZ9uFTOC/VLja8dpvl40ZYknU5NINfRZdwG1CkCORMPNOgUW5+bYrh6HygteE9z77mYQZYlgrQ07os0IIq1cnkWtVOFDCJOL1SnHUxfquPCsaC+0u33w/r+iqfNn3gPA7q94xtY2lUSLFizvSeKcyPwsHuhskomR++pRcn9djZskDTByyeeIptpBc3kqZfqpvRAM7HiIgvCbncFPLEx+IKjCJf3zOlx1cES4qUmWZH4T5k+G0soIWD2mJB4xY5RKQfJC1OnrkIxzIv1HhQD/0UjDA+Vhpq6mB2grdvEAAWdCN+1C0hbpgJIxO1k8=
+  file: "./docker-volume-gvfs"
+  skip_cleanup: true
+  on:
+    tags: true
