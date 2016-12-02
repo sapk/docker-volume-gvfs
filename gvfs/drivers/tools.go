@@ -37,6 +37,7 @@ func urlToDriver(urlStr string) (gvfsVolumeDriver, error) {
 	case "ftp":
 		return FTPVolumeDriver{url: u}, nil
 	case "ssh":
+	case "sftp":
 		return SSHVolumeDriver{url: u}, nil
 	case "smb":
 		return SMBVolumeDriver{url: u}, nil
