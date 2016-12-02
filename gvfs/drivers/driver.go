@@ -73,7 +73,7 @@ func Init(root string, dbus string) *GVfsDriver {
 }
 
 func (d GVfsDriver) startFuseDeamon() error {
-	//TODO check needed gvfsd + gvfsd-ftp Maybe allready on dbus ?
+	//TODO check needed gvfsd + gvfsd-ftp Maybe already on dbus ?
 	// Normaly gvfsd-fuse block such so this like crash but global ?
 
 	fi, err := os.Lstat(d.root)
