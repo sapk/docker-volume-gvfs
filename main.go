@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/sapk/docker-volume-gvfs/driver"
+	"github.com/sapk/docker-volume-gvfs/gvfs"
 )
 
 var (
@@ -11,8 +11,8 @@ var (
 )
 
 func main() {
-	driver.Version = version
-	driver.Commit = commit
-	driver.Branch = branch
-	driver.Start()
+	gvfs.Version = version
+	gvfs.Commit = commit
+	gvfs.Branch = branch
+	gvfs.Start()
 }

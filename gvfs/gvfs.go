@@ -1,4 +1,4 @@
-package driver
+package gvfs
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/volume"
+	"github.com/sapk/docker-volume-gvfs/gvfs/drivers"
 	"github.com/spf13/cobra"
 )
 
@@ -73,9 +74,8 @@ func typeOrEnv(cmd *cobra.Command, flag, envname string) string {
 }
 
 func daemonStart(cmd *cobra.Command, args []string) {
-	//TODO get additional args
 	dbus := typeOrEnv(cmd, DBusFlag, EnvDBus)
-	driver := newGVfsDriver(baseDir, dbus)
+	driver := drivers.Init(baseDir, dbus)
 	log.Debug(driver)
 	h := volume.NewHandler(driver)
 	log.Debug(h)

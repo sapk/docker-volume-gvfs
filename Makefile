@@ -4,12 +4,17 @@ BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 
 GO15VENDOREXPERIMENT=1
 GOPATH ?= $(GOPATH:):./vendor
+#GOOS=linux
 
-all: deps compile
+all: deps compile compress
 
 compile:
-	go build -ldflags "-X main.version=v${VERSION} -X main.branch=${BRANCH} -X main.commit=${COMMIT}"
+	#go build -ldflags "-X main.version=v${VERSION} -X main.branch=${BRANCH} -X main.commit=${COMMIT}"
+	go build -ldflags "-s -w -X main.version=v${VERSION} -X main.branch=${BRANCH} -X main.commit=${COMMIT}"
 	#go build
+
+compress:
+	upx --brute docker-volume-gvfs
 
 format:
 	gofmt -s -w -l .

@@ -1,9 +1,8 @@
-package driver
+package drivers
 
 import (
 	"bytes"
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,20 +22,29 @@ const (
 
 type gvfsVolume struct {
 	url         string
+	driver      *gvfsVolumeDriver
 	password    string
 	mountpoint  string
 	connections int
 }
 
-type gvfsDriver struct {
+type gvfsVolumeDriver interface {
+	id() DriverType
+	isAvailable() bool
+	mountpoint() (string, error)
+}
+
+//GVfsDriver the global driver responding to call
+type GVfsDriver struct {
 	sync.RWMutex
 	root    string
 	env     []string
 	volumes map[string]*gvfsVolume
 }
 
-func newGVfsDriver(root string, dbus string) *gvfsDriver {
-	d := &gvfsDriver{
+//Init start all needed deps and serve response to API call
+func Init(root string, dbus string) *GVfsDriver {
+	d := &GVfsDriver{
 		root:    root,
 		env:     make([]string, 1),
 		volumes: make(map[string]*gvfsVolume),
@@ -64,26 +72,7 @@ func newGVfsDriver(root string, dbus string) *gvfsDriver {
 	return d
 }
 
-func setEnv(cmd string, env []string) *exec.Cmd {
-	c := exec.Command("sh", "-c", cmd)
-	//c := exec.Command(strings.Split(cmd, " ")) //TODO better
-	c.Env = env
-	return c
-}
-
-// start deamon in context of this gvfs drive with custome env
-func (d gvfsDriver) startCmd(cmd string) error {
-	log.Debugf(cmd)
-	return setEnv(cmd, d.env).Start()
-}
-
-// run deamon in context of this gvfs drive with custome env
-func (d gvfsDriver) runCmd(cmd string) error {
-	log.Debugf(cmd)
-	return setEnv(cmd, d.env).Run()
-}
-
-func (d gvfsDriver) startFuseDeamon() error {
+func (d GVfsDriver) startFuseDeamon() error {
 	//TODO check needed gvfsd + gvfsd-ftp Maybe allready on dbus ?
 	// Normaly gvfsd-fuse block such so this like crash but global ?
 
@@ -111,32 +100,20 @@ func (d gvfsDriver) startFuseDeamon() error {
 	return nil
 }
 
-func urlToMountPoint(root string, urlString string) (string, error) {
-	//Done ftp://sapk@10.8.0.7 -> ftp:host=10.8.0.7,user=sapk
-	//Done ftp://10.8.0.7 -> ftp:host=10.8.0.7
-	//Done ftp://sapk.fr -> ftp:host=sapk.fr
-	//Done ftp://sapk@10.8.0.7:2121 -> ftp:host=10.8.0.7,port=2121,user=sapk
-	//Done ftp://sapk@10.8.0.7:21 -> ftp:host=10.8.0.7,user=sapk
-	//TODO other sheme
-	u, err := url.Parse(urlString)
-	if err != nil {
-		return "", err
-	}
-	name := u.Scheme + ":host=" + u.Host
-	if strings.Contains(u.Host, ":") {
-		el := strings.Split(u.Host, ":")
-		name = u.Scheme + ":host=" + el[0] //Default don't show port
-		if u.Scheme == "ftp" && el[1] != "21" {
-			name = u.Scheme + ":host=" + el[0] + ",port=" + el[1] //add port if not default
-		}
-	}
-	if u.User != nil {
-		name += ",user=" + u.User.Username()
-	}
-	return filepath.Join(root, name), nil
+// start deamon in context of this gvfs drive with custome env
+func (d GVfsDriver) startCmd(cmd string) error {
+	log.Debugf(cmd)
+	return setEnv(cmd, d.env).Start()
 }
 
-func (d gvfsDriver) Create(r volume.Request) volume.Response {
+// run deamon in context of this gvfs drive with custome env
+func (d GVfsDriver) runCmd(cmd string) error {
+	log.Debugf(cmd)
+	return setEnv(cmd, d.env).Run()
+}
+
+//Create create and init the requested volume
+func (d GVfsDriver) Create(r volume.Request) volume.Response {
 	log.Debugf("Entering Create: name: %s, options %v", r.Name, r.Options)
 	d.Lock()
 	defer d.Unlock()
@@ -145,14 +122,16 @@ func (d gvfsDriver) Create(r volume.Request) volume.Response {
 		return volume.Response{Err: "url option required"}
 	}
 
-	m, err := urlToMountPoint(d.root, r.Options["url"])
+	dr, m, err := getDriver(r.Options["url"])
 	if err != nil {
 		return volume.Response{Err: err.Error()}
 	}
+
 	v := &gvfsVolume{
 		url:         r.Options["url"],
+		driver:      dr,
 		password:    r.Options["password"],
-		mountpoint:  m,
+		mountpoint:  filepath.Join(d.root, m),
 		connections: 0,
 	}
 
@@ -161,7 +140,8 @@ func (d gvfsDriver) Create(r volume.Request) volume.Response {
 	return volume.Response{}
 }
 
-func (d gvfsDriver) Remove(r volume.Request) volume.Response {
+//Remove remove the requested volume
+func (d GVfsDriver) Remove(r volume.Request) volume.Response {
 	log.Debugf("Entering Remove: name: %s, options %v", r.Name, r.Options)
 	d.Lock()
 	defer d.Unlock()
@@ -177,7 +157,8 @@ func (d gvfsDriver) Remove(r volume.Request) volume.Response {
 	return volume.Response{Err: fmt.Sprintf("volume %s is currently used by a container", r.Name)}
 }
 
-func (d gvfsDriver) List(r volume.Request) volume.Response {
+//List volumes handled by thos driver
+func (d GVfsDriver) List(r volume.Request) volume.Response {
 	log.Debugf("Entering List: name: %s, options %v", r.Name, r.Options)
 
 	d.Lock()
@@ -191,7 +172,8 @@ func (d gvfsDriver) List(r volume.Request) volume.Response {
 	return volume.Response{Volumes: vols}
 }
 
-func (d gvfsDriver) Get(r volume.Request) volume.Response {
+//Get get info on the requested volume
+func (d GVfsDriver) Get(r volume.Request) volume.Response {
 	log.Debugf("Entering Get: name: %s", r.Name)
 	d.Lock()
 	defer d.Unlock()
@@ -205,7 +187,8 @@ func (d gvfsDriver) Get(r volume.Request) volume.Response {
 	return volume.Response{Volume: &volume.Volume{Name: r.Name, Mountpoint: v.mountpoint}}
 }
 
-func (d gvfsDriver) Path(r volume.Request) volume.Response {
+//Path get path of the requested volume
+func (d GVfsDriver) Path(r volume.Request) volume.Response {
 	log.Debugf("Entering Path: name: %s, options %v", r.Name)
 
 	d.RLock()
@@ -218,7 +201,8 @@ func (d gvfsDriver) Path(r volume.Request) volume.Response {
 	return volume.Response{Mountpoint: v.mountpoint}
 }
 
-func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
+//Mount mount the requested volume
+func (d GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 	log.Debugf("Entering Mount: %v", r)
 	d.Lock()
 	defer d.Unlock()
@@ -285,8 +269,9 @@ func (d gvfsDriver) Mount(r volume.MountRequest) volume.Response {
 	return volume.Response{Mountpoint: v.mountpoint}
 }
 
+//Unmount unmount the requested volume
 //TODO Monitor for unmount to remount ?
-func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
+func (d GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	//Execute gvfs-mount -u $params
 	log.Debugf("Entering Unmount: %v", r)
 
@@ -309,7 +294,8 @@ func (d gvfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	return volume.Response{}
 }
 
-func (d gvfsDriver) Capabilities(r volume.Request) volume.Response {
+//Capabilities Send capabilities of the local driver
+func (d GVfsDriver) Capabilities(r volume.Request) volume.Response {
 	log.Debugf("Entering Capabilities: %v", r)
 	return volume.Response{
 		Capabilities: volume.Capability{
