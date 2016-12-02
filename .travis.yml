@@ -17,6 +17,9 @@ script:
 - go list ./... | go test -v
 - make
 - ./docker-volume-gvfs
+after_success:
+- go test -race -coverprofile=coverage.txt -covermode=atomic
+- bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: releases
   api_key:

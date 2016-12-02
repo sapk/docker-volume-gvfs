@@ -1,7 +1,9 @@
-# docker-volume-gvfs
+# docker-volume-gvfs [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://github.com/sapk/docker-volume-gvfs/blob/master/LICENSE) ![Project Status](http://img.shields.io/badge/status-alpha-red.svg)
+[![GitHub release](https://img.shields.io/github/release/sapk/docker-volume-gvfs.svg)](https://github.com/sapk/docker-volume-gvfs/releases) [![Go Report Card](https://goreportcard.com/badge/github.com/sapk/docker-volume-gvfs)](https://goreportcard.com/report/github.com/sapk/docker-volume-gvfs) [![Travis](https://api.travis-ci.org/sapk/docker-volume-gvfs.svg?branch=master)](https://travis-ci.org/sapk/docker-volume-gvfs)
+
 Use GVfs as a backend for docker volume
 
-Status : **work in progress**
+Status : **proof of concept (working)**
 
 By using [GVfs](https://wiki.gnome.org/Projects/gvfs) this plugins allow the use of various backend as storage.
 
@@ -41,7 +43,4 @@ docker run -v test:/mnt:nocopy --rm -ti ubuntu
  - https://github.com/vieux/docker-volume-sshfs/
 
 ## TODO :
- - Implement sftp, smb, ftps, ...
- - Add test for differents backends (ftp,sftp,smb, ftps, ...)
- - Add systemctl service example file
- - Create AUR package
+ - Add test for differents backends (ftp, ssh, smb, dav, ...)
