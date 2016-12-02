@@ -24,3 +24,4 @@ _testmain.go
 *.prof
 
 /docker-volume-gvfs
+/coverage.txt
