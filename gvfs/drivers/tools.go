@@ -42,22 +42,19 @@ func isFile(path string) (bool, error) {
 }
 
 func urlToDriver(urlStr string) (gvfsVolumeDriver, error) {
-	u, err := url.Parse(urlStr)
+	u, err := url.ParseRequestURI(urlStr)
 	if err != nil {
 		return nil, err
 	}
 	switch u.Scheme {
-	case "ftp":
-	case "ftps":
+	case "ftp", "ftps":
 		return FTPVolumeDriver{url: u}, nil
-	case "ssh":
-	case "sftp":
+	case "ssh", "sftp":
 		return SSHVolumeDriver{url: u}, nil
 	case "smb":
 		return SMBVolumeDriver{url: u}, nil
-	case "dav":
-	case "davs":
+	case "dav", "davs":
 		return DavVolumeDriver{url: u}, nil
 	}
-	return nil, fmt.Errorf("%v is not matching any known driver", urlStr)
+	return nil, fmt.Errorf("%v is not matching any known driver", urlStr, u)
 }

@@ -19,7 +19,7 @@ func TestFTPIdName(t *testing.T) {
 		t.Error("Expected 'ftp', got ", name)
 	}
 }
-func TestSimpleIPURL(t *testing.T) {
+func TestFTPSimpleIPURL(t *testing.T) {
 	u, _ := url.Parse("ftp://10.0.0.1")
 	tmp := FTPVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
@@ -27,7 +27,7 @@ func TestSimpleIPURL(t *testing.T) {
 		t.Error("Expected ftp:host=10.0.0.1, got ", m, err)
 	}
 }
-func TestHostURL(t *testing.T) {
+func TestFTPHostURL(t *testing.T) {
 	u, _ := url.Parse("ftp://host")
 	tmp := FTPVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
@@ -35,7 +35,7 @@ func TestHostURL(t *testing.T) {
 		t.Error("Expected ftp:host=host, got ", m, err)
 	}
 }
-func TestUserInURL(t *testing.T) {
+func TestFTPUserInURL(t *testing.T) {
 	u, _ := url.Parse("ftp://user@host")
 	tmp := FTPVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
@@ -43,7 +43,7 @@ func TestUserInURL(t *testing.T) {
 		t.Error("Expected ftp:host=host,user=user, got ", m, err)
 	}
 }
-func TestPortInURL(t *testing.T) {
+func TestFTPPortInURL(t *testing.T) {
 	u, _ := url.Parse("ftp://host:42")
 	tmp := FTPVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
@@ -51,7 +51,7 @@ func TestPortInURL(t *testing.T) {
 		t.Error("Expected ftp:host=host,port=42, got ", m, err)
 	}
 }
-func TestDefaultPortInURL(t *testing.T) {
+func TestFTPDefaultPortInURL(t *testing.T) {
 	u, _ := url.Parse("ftp://host:21")
 	tmp := FTPVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
@@ -59,7 +59,7 @@ func TestDefaultPortInURL(t *testing.T) {
 		t.Error("Expected ftp:host=host, got ", m, err)
 	}
 }
-func TestFullURL(t *testing.T) {
+func TestFTPFullURL(t *testing.T) {
 	u, _ := url.Parse("ftp://user@host:42")
 	tmp := FTPVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
@@ -67,7 +67,7 @@ func TestFullURL(t *testing.T) {
 		t.Error("Expected ftp:host=host,port=42,user=user, got ", m, err)
 	}
 }
-func TestFullDefaultPortURL(t *testing.T) {
+func TestFTPFullDefaultPortURL(t *testing.T) {
 	u, _ := url.Parse("ftp://user@host:21")
 	tmp := FTPVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
