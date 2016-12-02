@@ -10,12 +10,15 @@ const (
 	SSH
 	//SMB id of smb driver type
 	SMB
+	//DAV id of dav driver type
+	DAV
 )
 
 var driverTypes = []string{
 	"ftp",
 	"ssh",
 	"smb",
+	"dav",
 }
 
 func (dt DriverType) String() string {

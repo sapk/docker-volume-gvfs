@@ -35,12 +35,16 @@ func urlToDriver(urlStr string) (gvfsVolumeDriver, error) {
 	}
 	switch u.Scheme {
 	case "ftp":
+	case "ftps":
 		return FTPVolumeDriver{url: u}, nil
 	case "ssh":
 	case "sftp":
 		return SSHVolumeDriver{url: u}, nil
 	case "smb":
 		return SMBVolumeDriver{url: u}, nil
+	case "dav":
+	case "davs":
+		return DavVolumeDriver{url: u}, nil
 	default:
 		return nil, fmt.Errorf("%v is not matching any known driver", urlStr)
 	}
