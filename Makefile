@@ -6,6 +6,7 @@ GO15VENDOREXPERIMENT=1
 GOPATH ?= $(GOPATH:):./vendor
 #GOOS=linux
 
+
 all: deps compile compress
 
 compile:
@@ -14,7 +15,7 @@ compile:
 	#go build
 
 compress:
-	upx --brute docker-volume-gvfs
+	upx --brute docker-volume-gvfs || upx-ucl --brute docker-volume-gvfs
 
 format:
 	gofmt -s -w -l .

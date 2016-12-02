@@ -1,5 +1,9 @@
 language: go
 sudo: false
+addons:
+  apt:
+    packages:
+    - upx-ucl
 go:
  - 1.6
  - 1.7
