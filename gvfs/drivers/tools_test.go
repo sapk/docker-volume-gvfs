@@ -3,9 +3,21 @@ package drivers
 import "testing"
 
 func TestIsFileRoot(t *testing.T) {
-	is, _ := isFile("/") //Is Folder so shouldn't be ok
+	is, err := isFile("/") //Is Folder so shouldn't be ok
 	if is {
-		t.Error("Expected false, got ", is)
+		t.Error("Expected false, got ", is, err)
+	}
+}
+func TestIsFileNotExist(t *testing.T) {
+	is, err := isFile("/dshdskjdkjs/sdjsjdsjks") //ls should be nok on all host
+	if is {
+		t.Error("Expected false, got ", is, err)
+	}
+}
+func TestIsFileLS(t *testing.T) {
+	is, err := isFile("/usr/bin/ls") //ls should be ok on all host
+	if !is || err != nil {
+		t.Error("Expected true without error, got ", is, err)
 	}
 }
 
