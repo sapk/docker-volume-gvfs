@@ -15,7 +15,11 @@ func (d DavVolumeDriver) id() DriverType {
 }
 
 func (d DavVolumeDriver) isAvailable() bool {
-	return true //TODO check for gvfsd-dav
+	is, err := isFile("/usr/lib/gvfs/gvfsd-dav")
+	if err == nil {
+		return is
+	}
+	return false
 }
 
 func (d DavVolumeDriver) mountpoint() (string, error) {
@@ -41,7 +45,7 @@ func (d DavVolumeDriver) mountpoint() (string, error) {
 	if d.url.User != nil {
 		mount += ",user=" + d.url.User.Username()
 	}
-	if d.url.Path != nil {
+	if d.url.Path == "" {
 		mount += ",prefix=" + d.url.EscapedPath() //TODO test
 	}
 	return mount, nil

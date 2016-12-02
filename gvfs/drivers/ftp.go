@@ -15,7 +15,11 @@ func (d FTPVolumeDriver) id() DriverType {
 }
 
 func (d FTPVolumeDriver) isAvailable() bool {
-	return true //TODO check for gvfsd-ftp
+	is, err := isFile("/usr/lib/gvfs/gvfsd-ftp")
+	if err == nil {
+		return is
+	}
+	return false
 }
 
 func (d FTPVolumeDriver) mountpoint() (string, error) {

@@ -15,7 +15,11 @@ func (d SSHVolumeDriver) id() DriverType {
 }
 
 func (d SSHVolumeDriver) isAvailable() bool {
-	return true //TODO check for gvfsd-ssh
+	is, err := isFile("/usr/lib/gvfs/gvfsd-sftp")
+	if err == nil {
+		return is
+	}
+	return false
 }
 
 func (d SSHVolumeDriver) mountpoint() (string, error) {

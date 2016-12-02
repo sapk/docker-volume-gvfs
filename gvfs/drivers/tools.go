@@ -3,6 +3,7 @@ package drivers
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"os/exec"
 )
 
@@ -28,6 +29,18 @@ func getDriver(urlStr string) (*gvfsVolumeDriver, string, error) {
 	return &d, m, nil
 }
 
+// Check if path exist and is not a folder
+func isFile(path string) (bool, error) {
+	f, err := os.Stat(path)
+	if err == nil {
+		if f.IsDir() {
+			return false, fmt.Errorf("File is a folder not a binary")
+		}
+		return true, nil
+	}
+	return false, err
+}
+
 func urlToDriver(urlStr string) (gvfsVolumeDriver, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
@@ -45,7 +58,6 @@ func urlToDriver(urlStr string) (gvfsVolumeDriver, error) {
 	case "dav":
 	case "davs":
 		return DavVolumeDriver{url: u}, nil
-	default:
-		return nil, fmt.Errorf("%v is not matching any known driver", urlStr)
 	}
+	return nil, fmt.Errorf("%v is not matching any known driver", urlStr)
 }

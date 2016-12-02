@@ -15,7 +15,11 @@ func (d SMBVolumeDriver) id() DriverType {
 }
 
 func (d SMBVolumeDriver) isAvailable() bool {
-	return true //TODO check for gvfsd-smb
+	is, err := isFile("/usr/lib/gvfs/gvfsd-smb")
+	if err == nil {
+		return is
+	}
+	return false
 }
 
 func (d SMBVolumeDriver) mountpoint() (string, error) {
