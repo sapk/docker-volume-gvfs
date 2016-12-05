@@ -18,7 +18,21 @@ make
 ## Start daemon
 ```
 ./docker-volume-gvfs daemon
-For more advance params : ./docker-volume-gvfs --help
+```
+For more advance params : ```./docker-volume-gvfs --help```
+```
+Run plugin in deamon mode
+
+Usage:
+  docker-volume-gvfs daemon [flags]
+
+Flags:
+  -d, --dbus string        DBus address to use for gvfs.  Can also set default environment DBUS_SESSION_BUS_ADDRESS
+  -o, --fuse-opts string   Fuse options to use for gvfs moint point (default "big_writes,allow_other,auto_cache")
+
+Global Flags:
+  -b, --basedir string   Mounted volume base directory (default "/var/lib/docker-volumes/gvfs")
+      --verbose          Turns on verbose logging      
 ```
 
 ## Create and Mount volume

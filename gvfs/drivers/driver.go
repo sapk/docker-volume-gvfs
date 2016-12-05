@@ -37,17 +37,19 @@ type gvfsVolumeDriver interface {
 //GVfsDriver the global driver responding to call
 type GVfsDriver struct {
 	sync.RWMutex
-	root    string
-	env     []string
-	volumes map[string]*gvfsVolume
+	root     string
+	fuseOpts string
+	env      []string
+	volumes  map[string]*gvfsVolume
 }
 
 //Init start all needed deps and serve response to API call
-func Init(root string, dbus string) *GVfsDriver {
+func Init(root string, dbus string, fuseOpts string) *GVfsDriver {
 	d := &GVfsDriver{
-		root:    root,
-		env:     make([]string, 1),
-		volumes: make(map[string]*gvfsVolume),
+		root:     root,
+		fuseOpts: fuseOpts,
+		env:      make([]string, 1),
+		volumes:  make(map[string]*gvfsVolume),
 	}
 	if dbus == "" {
 		// start needed dbus like (eval `dbus-launch --sh-syntax`) and get env variable
@@ -93,7 +95,7 @@ func (d GVfsDriver) startFuseDeamon() error {
 		return err
 	}
 
-	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o big_writes,use_ino,allow_other,auto_cache,umask=0022", d.root)) //Start ftp handler
+	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o "+d.fuseOpts, d.root)) //Start ftp handler
 	if err != nil {
 		return err
 	}

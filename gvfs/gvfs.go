@@ -14,6 +14,8 @@ import (
 const (
 	//VerboseFlag flag to set more verbose level
 	VerboseFlag = "verbose"
+	//FuseFlag flag to set Fuse moint point options
+	FuseFlag = "fuse-opts"
 	//DBusFlag flag to set DBus path
 	DBusFlag = "dbus"
 	//EnvDBus env to setor get from session DBus path
@@ -37,6 +39,7 @@ var (
 	//PluginAlias plugin alias name in docker
 	PluginAlias = "gvfs"
 	baseDir     = ""
+	fuseOpts    = ""
 	rootCmd     = &cobra.Command{
 		Use:              "docker-volume-gvfs",
 		Short:            "GVfs - Docker volume driver plugin",
@@ -75,7 +78,7 @@ func typeOrEnv(cmd *cobra.Command, flag, envname string) string {
 
 func daemonStart(cmd *cobra.Command, args []string) {
 	dbus := typeOrEnv(cmd, DBusFlag, EnvDBus)
-	driver := drivers.Init(baseDir, dbus)
+	driver := drivers.Init(baseDir, dbus, fuseOpts)
 	log.Debug(driver)
 	h := volume.NewHandler(driver)
 	log.Debug(h)
@@ -87,9 +90,10 @@ func daemonStart(cmd *cobra.Command, args []string) {
 
 func setupFlags() {
 	rootCmd.PersistentFlags().Bool(VerboseFlag, false, "Turns on verbose logging")
-	rootCmd.PersistentFlags().StringVar(&baseDir, BasedirFlag, filepath.Join(volume.DefaultDockerRootDirectory, PluginAlias), "Mounted volume base directory")
+	rootCmd.PersistentFlags().StringVarP(&baseDir, BasedirFlag, "b", filepath.Join(volume.DefaultDockerRootDirectory, PluginAlias), "Mounted volume base directory")
 
 	daemonCmd.Flags().StringP(DBusFlag, "d", "", "DBus address to use for gvfs.  Can also set default environment DBUS_SESSION_BUS_ADDRESS")
+	daemonCmd.Flags().StringVarP(&fuseOpts, FuseFlag, "o", "big_writes,allow_other,auto_cache", "Fuse options to use for gvfs moint point") //Other ex  big_writes,use_ino,allow_other,auto_cache,umask=0022
 }
 
 func setupLogger(cmd *cobra.Command, args []string) {
