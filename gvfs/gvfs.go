@@ -48,7 +48,7 @@ var (
 	}
 	daemonCmd = &cobra.Command{
 		Use:   "daemon",
-		Short: "Run plugin in deamon mode",
+		Short: "Run listening volume drive deamon to listen for mount request",
 		Run:   daemonStart,
 	}
 	versionCmd = &cobra.Command{
@@ -89,7 +89,7 @@ func daemonStart(cmd *cobra.Command, args []string) {
 }
 
 func setupFlags() {
-	rootCmd.PersistentFlags().Bool(VerboseFlag, false, "Turns on verbose logging")
+	rootCmd.PersistentFlags().BoolP(VerboseFlag, "v", false, "Turns on verbose logging")
 	rootCmd.PersistentFlags().StringVarP(&baseDir, BasedirFlag, "b", filepath.Join(volume.DefaultDockerRootDirectory, PluginAlias), "Mounted volume base directory")
 
 	daemonCmd.Flags().StringP(DBusFlag, "d", "", "DBus address to use for gvfs.  Can also set default environment DBUS_SESSION_BUS_ADDRESS")

@@ -19,9 +19,9 @@ make
 ```
 ./docker-volume-gvfs daemon
 ```
-For more advance params : ```./docker-volume-gvfs --help```
+For more advance params : ```./docker-volume-gvfs --help OR ./docker-volume-gvfs daemon --help```
 ```
-Run plugin in deamon mode
+Run listening volume drive deamon to listen for mount request
 
 Usage:
   docker-volume-gvfs daemon [flags]
@@ -32,7 +32,7 @@ Flags:
 
 Global Flags:
   -b, --basedir string   Mounted volume base directory (default "/var/lib/docker-volumes/gvfs")
-      --verbose          Turns on verbose logging      
+  -v, --verbose          Turns on verbose logging
 ```
 
 ## Create and Mount volume
