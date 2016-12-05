@@ -45,8 +45,8 @@ func (d DavVolumeDriver) mountpoint() (string, error) {
 	if d.url.User != nil {
 		mount += ",user=" + d.url.User.Username()
 	}
-	if d.url.Path == "" {
-		mount += ",prefix=" + d.url.EscapedPath() //TODO test
+	if d.url.Path != "" {
+		mount += ",prefix=" + url.QueryEscape(strings.TrimRight(d.url.EscapedPath(), "/"))
 	}
 	return mount, nil
 }
