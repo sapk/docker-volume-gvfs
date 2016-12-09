@@ -25,6 +25,6 @@
 [submodule "vendor/github.com/godbus/dbus"]
 	path = vendor/github.com/godbus/dbus
 	url = https://github.com/godbus/dbus
-[submodule "vendor/github.com/sirupsen/logrus"]
-	path = vendor/github.com/sirupsen/logrus
-	url = https://github.com/sirupsen/logrus.git
+[submodule "vendor/github.com/Sirupsen/logrus"]
+	path = vendor/github.com/Sirupsen/logrus
+	url = https://github.com/Sirupsen/logrus.git
