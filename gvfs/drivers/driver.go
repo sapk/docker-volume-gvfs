@@ -36,7 +36,7 @@ type gvfsVolumeDriver interface {
 
 //GVfsDriver the global driver responding to call
 type GVfsDriver struct {
-	lock     sync.RWMutex
+	sync.RWMutex
 	root     string
 	fuseOpts string
 	env      []string
@@ -117,8 +117,8 @@ func (d GVfsDriver) runCmd(cmd string) error {
 //Create create and init the requested volume
 func (d GVfsDriver) Create(r volume.Request) volume.Response {
 	log.Debugf("Entering Create: name: %s, options %v", r.Name, r.Options)
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.Lock()
+	defer d.Unlock()
 
 	if r.Options == nil || r.Options["url"] == "" {
 		return volume.Response{Err: "url option required"}
@@ -145,8 +145,8 @@ func (d GVfsDriver) Create(r volume.Request) volume.Response {
 //Remove remove the requested volume
 func (d GVfsDriver) Remove(r volume.Request) volume.Response {
 	log.Debugf("Entering Remove: name: %s, options %v", r.Name, r.Options)
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.Lock()
+	defer d.Unlock()
 	v, ok := d.volumes[r.Name]
 
 	if !ok {
@@ -163,8 +163,8 @@ func (d GVfsDriver) Remove(r volume.Request) volume.Response {
 func (d GVfsDriver) List(r volume.Request) volume.Response {
 	log.Debugf("Entering List: name: %s, options %v", r.Name, r.Options)
 
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.Lock()
+	defer d.Unlock()
 
 	var vols []*volume.Volume
 	for name, v := range d.volumes {
@@ -177,8 +177,8 @@ func (d GVfsDriver) List(r volume.Request) volume.Response {
 //Get get info on the requested volume
 func (d GVfsDriver) Get(r volume.Request) volume.Response {
 	log.Debugf("Entering Get: name: %s", r.Name)
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.Lock()
+	defer d.Unlock()
 
 	v, ok := d.volumes[r.Name]
 	if !ok {
@@ -193,8 +193,8 @@ func (d GVfsDriver) Get(r volume.Request) volume.Response {
 func (d GVfsDriver) Path(r volume.Request) volume.Response {
 	log.Debugf("Entering Path: name: %s, options %v", r.Name)
 
-	d.lock.RLock()
-	defer d.lock.RUnlock()
+	d.RLock()
+	defer d.RUnlock()
 	v, ok := d.volumes[r.Name]
 	if !ok {
 		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
@@ -206,8 +206,8 @@ func (d GVfsDriver) Path(r volume.Request) volume.Response {
 //Mount mount the requested volume
 func (d GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 	log.Debugf("Entering Mount: %v", r)
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.Lock()
+	defer d.Unlock()
 
 	v, ok := d.volumes[r.Name]
 	if !ok {
@@ -277,8 +277,8 @@ func (d GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	//Execute gvfs-mount -u $params
 	log.Debugf("Entering Unmount: %v", r)
 
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.Lock()
+	defer d.Unlock()
 	v, ok := d.volumes[r.Name]
 	if !ok {
 		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
