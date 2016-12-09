@@ -48,13 +48,19 @@ func TestUrlToDriverSMB(t *testing.T) {
 func TestUrlToDriverDav(t *testing.T) {
 	d, err := urlToDriver("dav://host")
 	if err != nil || d.id() != DAV {
-		t.Error("Expected a SMB driver, got ", d, err)
+		t.Error("Expected a DAV driver, got ", d, err)
 	}
 }
 func TestUrlToDriverDavs(t *testing.T) {
 	d, err := urlToDriver("davs://host")
 	if err != nil || d.id() != DAV {
-		t.Error("Expected a SMB driver, got ", d, err)
+		t.Error("Expected a DAV driver, got ", d, err)
+	}
+}
+func TestUrlToDriverNFS(t *testing.T) {
+	d, err := urlToDriver("nfs://host")
+	if err != nil || d.id() != NFS {
+		t.Error("Expected a NFS driver, got ", d, err)
 	}
 }
 func TestUrlToDriverUnkownError(t *testing.T) {

@@ -12,6 +12,8 @@ const (
 	SMB
 	//DAV id of dav driver type
 	DAV
+	//NFS id of nfs driver type
+	NFS
 )
 
 var driverTypes = []string{
@@ -19,6 +21,7 @@ var driverTypes = []string{
 	"ssh",
 	"smb",
 	"dav",
+	"nfs",
 }
 
 func (dt DriverType) String() string {

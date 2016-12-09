@@ -55,6 +55,8 @@ func urlToDriver(urlStr string) (gvfsVolumeDriver, error) {
 		return SMBVolumeDriver{url: u}, nil
 	case "dav", "davs":
 		return DavVolumeDriver{url: u}, nil
+	case "nfs":
+		return NFSVolumeDriver{url: u}, nil
 	}
 	return nil, fmt.Errorf("%v is not matching any known driver", urlStr, u)
 }
