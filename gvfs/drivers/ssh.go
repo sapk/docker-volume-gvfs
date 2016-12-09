@@ -23,11 +23,6 @@ func (d SSHVolumeDriver) isAvailable() bool {
 }
 
 func (d SSHVolumeDriver) mountpoint() (string, error) {
-	//Done sftp://10.8.0.7 -> sftp:host=10.8.0.7
-	//Done ssh://10.8.0.7 -> sftp:host=10.8.0.7
-	//Done sftp://sapk@10.8.0.7 -> sftp:host=10.8.0.7,user=sapk
-	//Done sftp://sapk.fr -> sftp:host=sapk.fr
-	//Done sftp://sapk@10.8.0.7:2121 -> sftp:host=10.8.0.7,port=2121,user=sapk
 	mount := "sftp" + ":host=" + d.url.Host
 	if strings.Contains(d.url.Host, ":") {
 		el := strings.Split(d.url.Host, ":")
