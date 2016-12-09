@@ -1,14 +1,18 @@
 # docker-volume-gvfs [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://github.com/sapk/docker-volume-gvfs/blob/master/LICENSE) ![Project Status](http://img.shields.io/badge/status-alpha-red.svg)
-[![GitHub release](https://img.shields.io/github/release/sapk/docker-volume-gvfs.svg)](https://github.com/sapk/docker-volume-gvfs/releases) [![Go Report Card](https://goreportcard.com/badge/github.com/sapk/docker-volume-gvfs)](https://goreportcard.com/report/github.com/sapk/docker-volume-gvfs) [![Travis](https://api.travis-ci.org/sapk/docker-volume-gvfs.svg?branch=master)](https://travis-ci.org/sapk/docker-volume-gvfs)
+[![GitHub release](https://img.shields.io/github/release/sapk/docker-volume-gvfs.svg)](https://github.com/sapk/docker-volume-gvfs/releases) [![Go Report Card](https://goreportcard.com/badge/github.com/sapk/docker-volume-gvfs)](https://goreportcard.com/report/github.com/sapk/docker-volume-gvfs)
 [![codecov](https://codecov.io/gh/sapk/docker-volume-gvfs/branch/master/graph/badge.svg)](https://codecov.io/gh/sapk/docker-volume-gvfs)
+ master : [![Travis master](https://api.travis-ci.org/sapk/docker-volume-gvfs.svg?branch=master)](https://travis-ci.org/sapk/docker-volume-gvfs) develop : [![Travis develop](https://api.travis-ci.org/sapk/docker-volume-gvfs.svg?branch=develop)](https://travis-ci.org/sapk/docker-volume-gvfs)
 
 Use GVfs as a backend for docker volume
 
 Status : **proof of concept (working)**
 
+
 By using [GVfs](https://wiki.gnome.org/Projects/gvfs) this plugins allow the use of various backend as storage.
 
-Dedends on gvfsd-fuse
+Dedends on gvfs and gvfsd-fuse (so dbus indirectly)
+
+Packages : [![Archlinux](https://img.shields.io/badge/Archlinux-AUR-blue.svg)](https://aur.archlinux.org/packages/docker-volume-gvfs-git/)
 
 ## Build
 ```
