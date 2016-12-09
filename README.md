@@ -14,6 +14,8 @@ Dedends on gvfs and gvfsd-fuse (so dbus indirectly)
 
 Packages : [![Archlinux](https://img.shields.io/badge/Archlinux-AUR-blue.svg)](https://aur.archlinux.org/packages/docker-volume-gvfs-git/)
 
+Working: SSH/SFTP/DAV/DAVS/FTP  
+In Progress: FTPS/NFS/SMB/CIFS/...
 ## Build
 ```
 make
@@ -44,6 +46,7 @@ Global Flags:
 docker volume create --driver gvfs --opt url=ftp://user@url --opt password=pass --name test
 docker run -v test:/mnt --rm -ti ubuntu
 ```
+NB : For mounting SSH/SFTP it is usefull to set a [ssh_config](https://linux.die.net/man/5/ssh_config) file for the running user in order to use a ssh key as authentification.
 
 ## Known bug:
 If when trying to start a container you get this error :
