@@ -3,8 +3,7 @@ MAINTAINER Antoine GIRARD <antoine.girard@sapk.fr>
 
 ENV GOPATH="/usr/share/docker-volume-gvfs"
 
-RUN    apk -U --no-progress upgrade \
-    && apk -U --force --no-progress add \
+RUN apk -U --force --no-progress add \
           build-tools make gcc go musl-dev git ca-certificates dbus dbus-x11 gvfs gvfs-fuse gvfs-dav gvfs-smb\
     && cd /usr/share/ \
     && git clone https://github.com/sapk/docker-volume-gvfs.git \
