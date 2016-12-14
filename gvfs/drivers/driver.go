@@ -95,7 +95,7 @@ func (d GVfsDriver) startFuseDeamon() error {
 		return err
 	}
 
-	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o "+d.fuseOpts, d.root)) //Start ftp handler
+	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o %s", d.root, d.fuseOpts)) //Start ftp handler
 	if err != nil {
 		return err
 	}

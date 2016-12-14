@@ -24,7 +24,10 @@ make
 ## Start daemon
 ```
 ./docker-volume-gvfs daemon
+OR in a docker container
+docker run -d --device=/dev/fuse:/dev/fuse --cap-add=SYS_ADMIN --cap-add=MKNOD  -v /run/docker/plugins:/run/docker/plugins -v /var/lib/docker-volumes/gvfs:/var/lib/docker-volumes/gvfs:shared sapk/docker-volume-gvfs
 ```
+
 For more advance params : ```./docker-volume-gvfs --help OR ./docker-volume-gvfs daemon --help```
 ```
 Run listening volume drive deamon to listen for mount request
