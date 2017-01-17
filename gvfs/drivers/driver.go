@@ -2,7 +2,9 @@ package drivers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/volume"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -21,10 +24,10 @@ const (
 )
 
 type gvfsVolume struct {
-	url         string
+	URL         string `json:"url,omitempty"`
 	driver      *gvfsVolumeDriver
-	password    string
-	mountpoint  string
+	Password    string `json:"password,omitempty"`
+	Mountpoint  string `json:"mountpoint,omitempty"`
 	connections int
 }
 
@@ -37,20 +40,55 @@ type gvfsVolumeDriver interface {
 //GVfsDriver the global driver responding to call
 type GVfsDriver struct {
 	sync.RWMutex
-	root     string
-	fuseOpts string
-	env      []string
-	volumes  map[string]*gvfsVolume
+	root       string
+	fuseOpts   string
+	env        []string
+	persitence *viper.Viper
+	volumes    map[string]*gvfsVolume
+}
+
+//GVfsPersistence represent struct of persistence file
+type GVfsPersistence struct {
+	Volumes map[string]*gvfsVolume `json:"volumes"`
 }
 
 //Init start all needed deps and serve response to API call
 func Init(root string, dbus string, fuseOpts string) *GVfsDriver {
 	d := &GVfsDriver{
-		root:     root,
-		fuseOpts: fuseOpts,
-		env:      make([]string, 1),
-		volumes:  make(map[string]*gvfsVolume),
+		root:       root,
+		fuseOpts:   fuseOpts,
+		env:        make([]string, 1),
+		persitence: viper.New(),
+		volumes:    make(map[string]*gvfsVolume),
 	}
+	d.persitence.SetDefault("volumes", map[string]*gvfsVolume{})
+	d.persitence.SetConfigName("persistence")
+	d.persitence.SetConfigType("json")
+	d.persitence.AddConfigPath("/etc/docker-volumes/gvfs/")
+	if err := d.persitence.ReadInConfig(); err != nil { // Handle errors reading the config file
+		log.Warn("No persistence file found, I will start with a empty list of volume.", err)
+	} else {
+		log.Debug("Retrieving volume list from persistence file.")
+		/**/
+		err := d.persitence.UnmarshalKey("volumes", &d.volumes)
+		if err != nil {
+			log.Warn("Unable to decode into struct -> start with empty list, %v", err)
+			d.volumes = make(map[string]*gvfsVolume)
+		}
+		/**/
+		/** Not needed since mountpoint is allready cached in object ? *
+		for k, v := range d.volumes {
+			dr, m, err := getDriver(v.URL)
+			if err != nil {
+				log.Warnf("Unable to init driver of %s, %v", url, err)
+			} else {
+				v.driver = dr
+			}
+		}
+		/**/
+		//d.volumes = d.persitence.GetStringMap("volumes")
+	}
+
 	if dbus == "" {
 		// start needed dbus like (eval `dbus-launch --sh-syntax`) and get env variable
 		result, err := exec.Command("dbus-launch", "--sh-syntax").CombinedOutput() //DBUS_SESSION_BUS_ADDRESS='unix:abstract=/tmp/dbus-JHGXLpeJ6A,guid=25ab632502ebccd43cd403bc58388fab';\n ...
@@ -71,7 +109,34 @@ func Init(root string, dbus string, fuseOpts string) *GVfsDriver {
 	if err != nil {
 		panic(err) //Something went wrong
 	}
+	//d.saveConfig()
 	return d
+}
+
+func (d GVfsDriver) saveConfig() error {
+	cfgFolder := "/etc/docker-volumes/gvfs/"
+	fi, err := os.Lstat(cfgFolder)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(cfgFolder, 0755); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+	if fi != nil && !fi.IsDir() {
+		return fmt.Errorf("%v already exist and it's not a directory", d.root)
+	}
+	b, err := json.Marshal(GVfsPersistence{Volumes: d.volumes})
+	if err != nil {
+		log.Warn("Unable to encode persistence struct, %v", err)
+	}
+	//log.Debug("Writing persistence struct, %v", b, d.volumes)
+	err = ioutil.WriteFile(cfgFolder+"/persistence.json", b, 0600)
+	if err != nil {
+		log.Warn("Unable to write persistence struct, %v", err)
+	}
+	//TODO display error messages
+	return err
 }
 
 func (d GVfsDriver) startFuseDeamon() error {
@@ -130,15 +195,16 @@ func (d GVfsDriver) Create(r volume.Request) volume.Response {
 	}
 
 	v := &gvfsVolume{
-		url:         r.Options["url"],
+		URL:         r.Options["url"],
 		driver:      dr,
-		password:    r.Options["password"],
-		mountpoint:  filepath.Join(d.root, m),
+		Password:    r.Options["password"],
+		Mountpoint:  filepath.Join(d.root, m),
 		connections: 0,
 	}
 
 	d.volumes[r.Name] = v
 	log.Debugf("Volume Created: %v", v)
+	d.saveConfig()
 	return volume.Response{}
 }
 
@@ -156,6 +222,7 @@ func (d GVfsDriver) Remove(r volume.Request) volume.Response {
 		delete(d.volumes, r.Name)
 		return volume.Response{}
 	}
+	d.saveConfig()
 	return volume.Response{Err: fmt.Sprintf("volume %s is currently used by a container", r.Name)}
 }
 
@@ -168,7 +235,7 @@ func (d GVfsDriver) List(r volume.Request) volume.Response {
 
 	var vols []*volume.Volume
 	for name, v := range d.volumes {
-		vols = append(vols, &volume.Volume{Name: name, Mountpoint: v.mountpoint})
+		vols = append(vols, &volume.Volume{Name: name, Mountpoint: v.Mountpoint})
 		log.Debugf("Volume found: %s", v)
 	}
 	return volume.Response{Volumes: vols}
@@ -186,7 +253,7 @@ func (d GVfsDriver) Get(r volume.Request) volume.Response {
 	}
 
 	log.Debugf("Volume found: %s", v)
-	return volume.Response{Volume: &volume.Volume{Name: r.Name, Mountpoint: v.mountpoint}}
+	return volume.Response{Volume: &volume.Volume{Name: r.Name, Mountpoint: v.Mountpoint}}
 }
 
 //Path get path of the requested volume
@@ -200,7 +267,7 @@ func (d GVfsDriver) Path(r volume.Request) volume.Response {
 		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
 	}
 	log.Debugf("Volume found: %s", v)
-	return volume.Response{Mountpoint: v.mountpoint}
+	return volume.Response{Mountpoint: v.Mountpoint}
 }
 
 //Mount mount the requested volume
@@ -216,11 +283,11 @@ func (d GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 
 	if v.connections > 0 {
 		v.connections++
-		return volume.Response{Mountpoint: v.mountpoint}
+		return volume.Response{Mountpoint: v.Mountpoint}
 	}
 
-	cmd := fmt.Sprintf("gvfs-mount %s", v.url)
-	if v.password != "" {
+	cmd := fmt.Sprintf("gvfs-mount %s", v.URL)
+	if v.Password != "" {
 		p := setEnv(cmd, d.env)
 		inStd, err := p.StdinPipe()
 		if err != nil { //Get a input buffer
@@ -234,7 +301,7 @@ func (d GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 		if err := p.Start(); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
-		inStd.Write([]byte(v.password + "\n")) //Send password to process + Send return line
+		inStd.Write([]byte(v.Password + "\n")) //Send password to process + Send return line
 
 		// wait or timeout
 		donec := make(chan error, 1)
@@ -268,7 +335,8 @@ func (d GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 		}
 	}
 
-	return volume.Response{Mountpoint: v.mountpoint}
+	d.saveConfig()
+	return volume.Response{Mountpoint: v.Mountpoint}
 }
 
 //Unmount unmount the requested volume
@@ -284,7 +352,7 @@ func (d GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
 	}
 	if v.connections <= 1 {
-		cmd := fmt.Sprintf("gvfs-mount -u %s", v.url)
+		cmd := fmt.Sprintf("gvfs-mount -u %s", v.URL)
 		if err := d.runCmd(cmd); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
@@ -293,6 +361,7 @@ func (d GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 		v.connections--
 	}
 
+	d.saveConfig()
 	return volume.Response{}
 }
 
