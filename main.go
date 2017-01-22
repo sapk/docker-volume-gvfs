@@ -5,14 +5,20 @@ import (
 )
 
 var (
-	version string
-	branch  string
-	commit  string
+	//Version version of app set by build flag
+	Version string
+	//Branch git branch of app set by build flag
+	Branch string
+	//Commit git commit of app set by build flag
+	Commit string
+	//BuildTime build time of app set by build flag
+	BuildTime string
 )
 
 func main() {
-	gvfs.Version = version
-	gvfs.Commit = commit
-	gvfs.Branch = branch
+	gvfs.Version = Version
+	gvfs.Commit = Commit
+	gvfs.Branch = Branch
+	gvfs.BuildTime = BuildTime
 	gvfs.Start()
 }

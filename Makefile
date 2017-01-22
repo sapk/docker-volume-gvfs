@@ -1,15 +1,16 @@
-#Inspired from : https://github.com/littlemanco/boilr-makefile/blob/master/template/Makefile, https://github.com/geetarista/go-boilerplate/blob/master/Makefile, https://github.com/nascii/go-boilerplate/blob/master/GNUmakefile
+#Inspired from : https://github.com/littlemanco/boilr-makefile/blob/master/template/Makefile, https://github.com/geetarista/go-boilerplate/blob/master/Makefile, https://github.com/nascii/go-boilerplate/blob/master/GNUmakefile https://github.com/cloudflare/hellogopher/blob/master/Makefile
 #PATH=$(PATH:):$(GOPATH)/bin
 APP_NAME=docker-volume-gvfs
 APP_VERSION=$(shell git describe --abbrev=0)
 GIT_HASH=$(shell git rev-parse --short HEAD)
 GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+DATE := $(shell date -u '+%Y-%m-%d-%H%M-UTC')
 
 ARCHIVE=$(APP_NAME)-$(APP_VERSION)-$(GIT_HASH).tar.gz
 #DEPS = $(go list -f '{{range .TestImports}}{{.}} {{end}}' ./...)
 LDFLAGS = \
   -s -w \
-  -X main.version=$(APP_VERSION}) -X main.branch=$(GIT_BRANCH) -X main.commit=$(GIT_HASH)
+  -X main.Version=$(APP_VERSION}) -X main.Branch=$(GIT_BRANCH) -X main.Commit=$(GIT_HASH) -X main.BuildTime=$(DATE)
 
 GO15VENDOREXPERIMENT=1
 GOPATH ?= $(GOPATH:):./vendor

@@ -25,7 +25,7 @@ const (
 	longHelp    = `
 docker-volume-gvfs (GVfs Volume Driver Plugin)
 Provides docker volume support for GVfs.
-== Version: %s - Branch: %s - Commit: %s ==
+== Version: %s - Branch: %s - Commit: %s - BuildTime: %s ==
 `
 )
 
@@ -36,6 +36,8 @@ var (
 	Branch string
 	//Commit commit of running code
 	Commit string
+	//BuildTime build time of running code
+	BuildTime string
 	//PluginAlias plugin alias name in docker
 	PluginAlias = "gvfs"
 	baseDir     = ""
@@ -55,7 +57,7 @@ var (
 		Use:   "version",
 		Short: "Display current version and build date",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("\nVersion: %s - Branch: %s - Commit: %s\n\n", Version, Branch, Commit)
+			fmt.Printf("\nVersion: %s - Branch: %s - Commit: %s - BuildTime: %s\n\n", Version, Branch, Commit, BuildTime)
 		},
 	}
 )
@@ -63,7 +65,7 @@ var (
 //Start start the program
 func Start() {
 	setupFlags()
-	rootCmd.Long = fmt.Sprintf(longHelp, Version, Branch, Commit)
+	rootCmd.Long = fmt.Sprintf(longHelp, Version, Branch, Commit, BuildTime)
 	rootCmd.AddCommand(versionCmd, daemonCmd)
 	rootCmd.Execute()
 }
@@ -82,7 +84,7 @@ func daemonStart(cmd *cobra.Command, args []string) {
 	log.Debug(driver)
 	h := volume.NewHandler(driver)
 	log.Debug(h)
-	err := h.ServeUnix("root", PluginAlias)
+	err := h.ServeUnix(PluginAlias, 0)
 	if err != nil {
 		log.Debug(err)
 	}
