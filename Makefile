@@ -2,9 +2,13 @@
 #PATH=$(PATH:):$(GOPATH)/bin
 APP_NAME=docker-volume-gvfs
 APP_VERSION=$(shell git describe --abbrev=0)
+APP_USERREPO=github.com/sapk
+APP_PACKAGE=$(APP_USERREPO)/docker-volume-gvfs
+
 GIT_HASH=$(shell git rev-parse --short HEAD)
 GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 DATE := $(shell date -u '+%Y-%m-%d-%H%M-UTC')
+PWD=$(shell pwd)
 
 ARCHIVE=$(APP_NAME)-$(APP_VERSION)-$(GIT_HASH).tar.gz
 #DEPS = $(go list -f '{{range .TestImports}}{{.}} {{end}}' ./...)
@@ -12,8 +16,10 @@ LDFLAGS = \
   -s -w \
   -X main.Version=$(APP_VERSION}) -X main.Branch=$(GIT_BRANCH) -X main.Commit=$(GIT_HASH) -X main.BuildTime=$(DATE)
 
+FAKE_GOPATH = $(PWD)/.gopath
+FAKE_PACKAGE = $(FAKE_GOPATH)/src/$(APP_PACKAGE)
+
 GO15VENDOREXPERIMENT=1
-GOPATH ?= $(GOPATH:):./vendor
 DOC_PORT = 6060
 #GOOS=linux
 
@@ -22,48 +28,53 @@ NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
 WARN_COLOR=\033[33;01m
 
+
 all: build compress done
 
-build: deps format compile
+build: deps format clean compile
 
-compile:
+set-build:
+	@if [ ! -d $(PWD)/.gopath/src/$(APP_USERREPO) ]; then mkdir -p $(PWD)/.gopath/src/$(APP_USERREPO); fi
+	@if [ ! -d $(PWD)/.gopath/src/$(APP_PACKAGE) ]; then ln -s $(PWD) $(PWD)/.gopath/src/$(APP_PACKAGE); fi
+
+compile: set-build
 	@echo -e "$(OK_COLOR)==> Building...$(NO_COLOR)"
-	go build -v -ldflags "$(LDFLAGS)"
+	cd $(FAKE_PACKAGE) && GOPATH=$(FAKE_GOPATH) go build -v -ldflags "$(LDFLAGS)"
 
-release: clean deps format
+release: clean set-build deps format
 	@mkdir build
 	@echo -e "$(OK_COLOR)==> Building for linux 32 ...$(NO_COLOR)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -o build/${APP_NAME}-linux-386 -ldflags "$(LDFLAGS)"
+	cd $(FAKE_PACKAGE) && GOPATH=$(FAKE_GOPATH) CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -o build/${APP_NAME}-linux-386 -ldflags "$(LDFLAGS)"
 	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
 	@upx --brute  build/${APP_NAME}-linux-386 || upx-ucl --brute  build/${APP_NAME}-linux-386 || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
 
 	@echo -e "$(OK_COLOR)==> Building for linux 64 ...$(NO_COLOR)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/${APP_NAME}-linux-amd64 -ldflags "$(LDFLAGS)"
+	cd $(FAKE_PACKAGE) && GOPATH=$(FAKE_GOPATH) GO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/${APP_NAME}-linux-amd64 -ldflags "$(LDFLAGS)"
 	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
 	@upx --brute  build/${APP_NAME}-linux-amd64 || upx-ucl --brute  build/${APP_NAME}-linux-amd64 || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
 
 	@echo -e "$(OK_COLOR)==> Building for linux arm ...$(NO_COLOR)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -o build/${APP_NAME}-linux-armv6 -ldflags "$(LDFLAGS)"
+	cd $(FAKE_PACKAGE) && GOPATH=$(FAKE_GOPATH) CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -o build/${APP_NAME}-linux-armv6 -ldflags "$(LDFLAGS)"
 	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
 	@upx --brute  build/${APP_NAME}-linux-armv6 || upx-ucl --brute  build/${APP_NAME}-linux-armv6 || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
 
 	@echo -e "$(OK_COLOR)==> Building for darwin32 ...$(NO_COLOR)"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=386 go build -o build/${APP_NAME}-darwin-386 -ldflags "$(LDFLAGS)"
+	cd $(FAKE_PACKAGE) && GOPATH=$(FAKE_GOPATH) CGO_ENABLED=0 GOOS=darwin GOARCH=386 go build -o build/${APP_NAME}-darwin-386 -ldflags "$(LDFLAGS)"
 	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
 	@upx --brute  build/${APP_NAME}-darwin-386 || upx-ucl --brute  build/${APP_NAME}-darwin-386 || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
 
 	@echo -e "$(OK_COLOR)==> Building for darwin64 ...$(NO_COLOR)"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/${APP_NAME}-darwin-amd64 -ldflags "$(LDFLAGS)"
+	cd $(FAKE_PACKAGE) && GOPATH=$(FAKE_GOPATH) CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/${APP_NAME}-darwin-amd64 -ldflags "$(LDFLAGS)"
 	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
 	@upx --brute  build/${APP_NAME}-darwin-amd64 || upx-ucl --brute  build/${APP_NAME}-darwin-amd64 || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
 
 #	@echo -e "$(OK_COLOR)==> Building for win32 ...$(NO_COLOR)"
-#	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -o build/${APP_NAME}-win-386 -ldflags "$(LDFLAGS)"
+#	cd $(FAKE_PACKAGE) && GOPATH=$(FAKE_GOPATH) CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -o build/${APP_NAME}-win-386 -ldflags "$(LDFLAGS)"
 #	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
 #	@upx --brute  build/${APP_NAME}-win-386 || upx-ucl --brute  build/${APP_NAME}-win-386 || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
 
 #	@echo -e "$(OK_COLOR)==> Building for win64 ...$(NO_COLOR)"
-#	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/${APP_NAME}-win-amd64 -ldflags "$(LDFLAGS)"
+#	cd $(FAKE_PACKAGE) && GOPATH=$(FAKE_GOPATH) CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/${APP_NAME}-win-amd64 -ldflags "$(LDFLAGS)"
 #	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
 #	@upx --brute  build/${APP_NAME}-win-amd64 || upx-ucl --brute  build/${APP_NAME}-win-amd64 || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
 
@@ -73,6 +84,7 @@ release: clean deps format
 clean:
 	@if [ -x docker-volume-gvfs ]; then rm docker-volume-gvfs; fi
 	@if [ -d build ]; then rm -R build; fi
+	@if [ -d $(FAKE_GOPATH) ]; then rm -R $(FAKE_GOPATH); fi
 
 compress:
 	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
@@ -80,7 +92,8 @@ compress:
 
 format:
 	@echo -e "$(OK_COLOR)==> Formatting...$(NO_COLOR)"
-	go fmt ./...
+	go fmt . ./gvfs/...
+#go fmt ./...
 
 test: deps format
 	@echo -e "$(OK_COLOR)==> Running tests...$(NO_COLOR)"
@@ -96,20 +109,32 @@ lint: dev-deps
 	gometalinter --deadline=5m --concurrency=2 --vendor ./...
 
 dev-deps:
+	@echo -e "$(OK_COLOR)==> Installing developement dependencies...$(NO_COLOR)"
+	@go get github.com/nsf/gocode
+	@go get github.com/alecthomas/gometalinter
+	@go get github.com/dpw/vendetta #Vendoring
+	@$(GOPATH)/bin/gometalinter --install > /dev/null
+
+update-dev-deps:
 	@echo -e "$(OK_COLOR)==> Installing/Updating developement dependencies...$(NO_COLOR)"
 	go get -u github.com/nsf/gocode
 	go get -u github.com/alecthomas/gometalinter
-	gometalinter --install --update
+	go get -u github.com/dpw/vendetta #Vendoring
+	$(GOPATH)/bin/gometalinter --install --update
 
 deps:
 	@echo -e "$(OK_COLOR)==> Installing dependencies ...$(NO_COLOR)"
-	@go get -d -v ./...
+	@git submodule update --init --recursive
+# @$(GOPATH)/bin/vendetta -n $(APP_PACKAGE)
+#	@go get -d -v ./...
 
-update-deps:
-	@echo "$(OK_COLOR)==> Updating all dependencies ...$(NO_COLOR)"
-	@go get -d -v -u ./...
+update-deps: dev-deps
+	@echo -e "$(OK_COLOR)==> Updating all dependencies ...$(NO_COLOR)"
+	$(GOPATH)/bin/vendetta -n $(APP_PACKAGE) -u
+#@go get -d -v -u ./...
+
 
 done:
 	@echo -e "$(OK_COLOR)==> Done.$(NO_COLOR)"
 
-.PHONY: all build compile clean compress format test docs lint dev-deps deps update-deps done
+.PHONY: all build compile clean compress format test docs lint dev-deps update-dev-deps deps update-deps done

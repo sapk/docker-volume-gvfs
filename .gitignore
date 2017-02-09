@@ -27,3 +27,4 @@ _testmain.go
 /docker-volume-gvfs-*
 /coverage.*
 /build
+/.gopath
