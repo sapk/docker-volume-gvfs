@@ -5,6 +5,9 @@ APP_VERSION=$(shell git describe --abbrev=0)
 APP_USERREPO=github.com/sapk
 APP_PACKAGE=$(APP_USERREPO)/docker-volume-gvfs
 
+PLUGIN_NAME=sapk/$(APP_NAME)
+PLUGIN_TAG=latest
+
 GIT_HASH=$(shell git rev-parse --short HEAD)
 GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 DATE := $(shell date -u '+%Y-%m-%d-%H%M-UTC')
@@ -32,6 +35,33 @@ WARN_COLOR=\033[33;01m
 all: build compress done
 
 build: deps format clean compile
+
+push:  clean docker rootfs create enable
+	@echo "### push plugin ${PLUGIN_NAME}:${PLUGIN_TAG}"
+	@docker plugin push ${PLUGIN_NAME}:${PLUGIN_TAG}
+	
+rootfs:
+	@echo "### create rootfs directory in ./plugin/rootfs"
+	@mkdir -p ./plugin/rootfs
+	@docker create --name tmp ${PLUGIN_NAME}:rootfs
+	@docker export tmp | tar -x -C ./plugin/rootfs
+	@echo "### copy config.json to ./plugin/"
+	@cp config.json ./plugin/
+	@docker rm -vf tmp
+	
+docker:
+	@echo "### docker build: builder image"
+	@docker build -q -t ${PLUGIN_NAME}:rootfs -f .support/docker/Dockerfile /dev/null
+	
+create:
+	@echo "### remove existing plugin ${PLUGIN_NAME}:${PLUGIN_TAG} if exists"
+	@docker plugin rm -f ${PLUGIN_NAME}:${PLUGIN_TAG} || true
+	@echo "### create new plugin ${PLUGIN_NAME}:${PLUGIN_TAG} from ./plugin"
+	@docker plugin create ${PLUGIN_NAME}:${PLUGIN_TAG} ./plugin
+
+enable:
+	@echo "### enable plugin ${PLUGIN_NAME}:${PLUGIN_TAG}"
+	@docker plugin enable ${PLUGIN_NAME}:${PLUGIN_TAG}
 
 set-build:
 	@if [ ! -d $(PWD)/.gopath/src/$(APP_USERREPO) ]; then mkdir -p $(PWD)/.gopath/src/$(APP_USERREPO); fi
@@ -85,6 +115,7 @@ clean:
 	@if [ -x docker-volume-gvfs ]; then rm docker-volume-gvfs; fi
 	@if [ -d build ]; then rm -R build; fi
 	@if [ -d $(FAKE_GOPATH) ]; then rm -R $(FAKE_GOPATH); fi
+	@rm -rf ./plugin
 
 compress:
 	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
