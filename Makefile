@@ -37,30 +37,30 @@ all: build compress done
 build: deps format clean compile
 
 push:  clean docker rootfs create enable
-	@echo "### push plugin ${PLUGIN_NAME}:${PLUGIN_TAG}"
+	@echo -e "$(OK_COLOR)==> push plugin ${PLUGIN_NAME}:${PLUGIN_TAG}$(NO_COLOR)"
 	@docker plugin push ${PLUGIN_NAME}:${PLUGIN_TAG}
 	
 rootfs:
-	@echo "### create rootfs directory in ./plugin/rootfs"
+	@echo -e "$(OK_COLOR)==> create rootfs directory in ./plugin/rootfs$(NO_COLOR)"
 	@mkdir -p ./plugin/rootfs
 	@docker create --name tmp ${PLUGIN_NAME}:rootfs
 	@docker export tmp | tar -x -C ./plugin/rootfs
-	@echo "### copy config.json to ./plugin/"
+	@echo -e "### copy config.json to ./plugin/$(NO_COLOR)"
 	@cp config.json ./plugin/
 	@docker rm -vf tmp
 	
 docker:
-	@echo "### docker build: builder image"
+	@echo -e "$(OK_COLOR)==> Docker build image$(NO_COLOR)"
 	@docker build -q -t ${PLUGIN_NAME}:rootfs -f .support/docker/Dockerfile /dev/null
 	
 create:
-	@echo "### remove existing plugin ${PLUGIN_NAME}:${PLUGIN_TAG} if exists"
+	@echo -e "$(OK_COLOR)==> Remove existing plugin ${PLUGIN_NAME}:${PLUGIN_TAG} if exists$(NO_COLOR)"
 	@docker plugin rm -f ${PLUGIN_NAME}:${PLUGIN_TAG} || true
-	@echo "### create new plugin ${PLUGIN_NAME}:${PLUGIN_TAG} from ./plugin"
+	@echo -e "$(OK_COLOR)==> Create new plugin ${PLUGIN_NAME}:${PLUGIN_TAG} from ./plugin$(NO_COLOR)"
 	@docker plugin create ${PLUGIN_NAME}:${PLUGIN_TAG} ./plugin
 
 enable:
-	@echo "### enable plugin ${PLUGIN_NAME}:${PLUGIN_TAG}"
+	@echo -e "$(OK_COLOR)==> Enable plugin ${PLUGIN_NAME}:${PLUGIN_TAG}$(NO_COLOR)"
 	@docker plugin enable ${PLUGIN_NAME}:${PLUGIN_TAG}
 
 set-build:
