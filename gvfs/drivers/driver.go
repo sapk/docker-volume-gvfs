@@ -62,7 +62,7 @@ func Init(root string, dbus string, fuseOpts string) *GVfsDriver {
 		volumes:    make(map[string]*gvfsVolume),
 	}
 	d.persitence.SetDefault("volumes", map[string]*gvfsVolume{})
-	d.persitence.SetConfigName("persistence")
+	d.persitence.SetConfigName("gvfs-persistence")
 	d.persitence.SetConfigType("json")
 	d.persitence.AddConfigPath("/etc/docker-volumes/gvfs/")
 	if err := d.persitence.ReadInConfig(); err != nil { // Handle errors reading the config file
