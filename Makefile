@@ -36,7 +36,7 @@ all: build compress done
 
 build: deps clean format compile
 
-docker-plugin: clean docker-rootfs docker-plugin-create docker-plugin-enable
+docker-plugin: docker-rootfs docker-plugin-create docker-plugin-enable
 
 docker-image:
 	@echo -e "$(OK_COLOR)==> Docker build image$(NO_COLOR)"
