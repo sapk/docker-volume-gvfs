@@ -113,7 +113,7 @@ func Init(root string, dbus string, fuseOpts string) *GVfsDriver {
 	return d
 }
 
-func (d GVfsDriver) saveConfig() error {
+func (d *GVfsDriver) saveConfig() error {
 	cfgFolder := "/etc/docker-volumes/gvfs/"
 	fi, err := os.Lstat(cfgFolder)
 	if os.IsNotExist(err) {
@@ -139,7 +139,7 @@ func (d GVfsDriver) saveConfig() error {
 	return err
 }
 
-func (d GVfsDriver) startFuseDeamon() error {
+func (d *GVfsDriver) startFuseDeamon() error {
 	//TODO check needed gvfsd + gvfsd-ftp Maybe already on dbus ?
 	// Normaly gvfsd-fuse block such so this like crash but global ?
 
@@ -165,19 +165,19 @@ func (d GVfsDriver) startFuseDeamon() error {
 }
 
 // start deamon in context of this gvfs drive with custome env
-func (d GVfsDriver) startCmd(cmd string) error {
+func (d *GVfsDriver) startCmd(cmd string) error {
 	log.Debugf(cmd)
 	return setEnv(cmd, d.env).Start()
 }
 
 // run deamon in context of this gvfs drive with custome env
-func (d GVfsDriver) runCmd(cmd string) error {
+func (d *GVfsDriver) runCmd(cmd string) error {
 	log.Debugf(cmd)
 	return setEnv(cmd, d.env).Run()
 }
 
 //Create create and init the requested volume
-func (d GVfsDriver) Create(r volume.Request) volume.Response {
+func (d *GVfsDriver) Create(r volume.Request) volume.Response {
 	log.Debugf("Entering Create: name: %s, options %v", r.Name, r.Options)
 	d.Lock()
 	defer d.Unlock()
@@ -206,7 +206,7 @@ func (d GVfsDriver) Create(r volume.Request) volume.Response {
 }
 
 //Remove remove the requested volume
-func (d GVfsDriver) Remove(r volume.Request) volume.Response {
+func (d *GVfsDriver) Remove(r volume.Request) volume.Response {
 	log.Debugf("Entering Remove: name: %s, options %v", r.Name, r.Options)
 	d.Lock()
 	defer d.Unlock()
@@ -224,7 +224,7 @@ func (d GVfsDriver) Remove(r volume.Request) volume.Response {
 }
 
 //List volumes handled by thos driver
-func (d GVfsDriver) List(r volume.Request) volume.Response {
+func (d *GVfsDriver) List(r volume.Request) volume.Response {
 	log.Debugf("Entering List: name: %s, options %v", r.Name, r.Options)
 
 	d.Lock()
@@ -239,7 +239,7 @@ func (d GVfsDriver) List(r volume.Request) volume.Response {
 }
 
 //Get get info on the requested volume
-func (d GVfsDriver) Get(r volume.Request) volume.Response {
+func (d *GVfsDriver) Get(r volume.Request) volume.Response {
 	log.Debugf("Entering Get: name: %s", r.Name)
 	d.Lock()
 	defer d.Unlock()
@@ -254,7 +254,7 @@ func (d GVfsDriver) Get(r volume.Request) volume.Response {
 }
 
 //Path get path of the requested volume
-func (d GVfsDriver) Path(r volume.Request) volume.Response {
+func (d *GVfsDriver) Path(r volume.Request) volume.Response {
 	log.Debugf("Entering Path: name: %s, options %v", r.Name)
 
 	d.RLock()
@@ -268,7 +268,7 @@ func (d GVfsDriver) Path(r volume.Request) volume.Response {
 }
 
 //Mount mount the requested volume
-func (d GVfsDriver) Mount(r volume.MountRequest) volume.Response {
+func (d *GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 	log.Debugf("Entering Mount: %v", r)
 	d.Lock()
 	defer d.Unlock()
@@ -338,7 +338,7 @@ func (d GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 
 //Unmount unmount the requested volume
 //TODO Monitor for unmount to remount ?
-func (d GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
+func (d *GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	//Execute gvfs-mount -u $params
 	log.Debugf("Entering Unmount: %v", r)
 
@@ -363,7 +363,7 @@ func (d GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 }
 
 //Capabilities Send capabilities of the local driver
-func (d GVfsDriver) Capabilities(r volume.Request) volume.Response {
+func (d *GVfsDriver) Capabilities(r volume.Request) volume.Response {
 	log.Debugf("Entering Capabilities: %v", r)
 	return volume.Response{
 		Capabilities: volume.Capability{
