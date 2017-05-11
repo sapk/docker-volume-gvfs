@@ -69,3 +69,4 @@ docker run -v test:/mnt:nocopy --rm -ti ubuntu
 
 ## TODO :
  - Add test for differents backends (ftp, ssh, smb, dav, ...)
+ - Add to docker hub as a plugin (https://docs.docker.com/engine/reference/commandline/plugin_create/)
