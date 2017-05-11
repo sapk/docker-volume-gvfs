@@ -13,13 +13,9 @@ go:
 install:
   - make dev-deps
 script:
-  - go vet ./... || echo "Something could be improved !"
-  - test -z "$(golint ./... | grep -v vendor/ | tee /dev/stderr)"
-  - test -z "$(gofmt -s -l . | grep -v vendor/ | tee /dev/stderr)"
   - make lint
   - make build
   - make test
-#- go list ./... | go test -v
   - ./docker-volume-gvfs
 after_success:
   - bash <(curl -s https://codecov.io/bash)
