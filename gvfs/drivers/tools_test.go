@@ -15,7 +15,7 @@ func TestIsFileNotExist(t *testing.T) {
 	}
 }
 func TestIsFileLS(t *testing.T) {
-	is, err := isFile("/usr/bin/ls") //ls should be ok on all host
+	is, err := isFile("/bin/ls") //ls should be ok on all host
 	if !is || err != nil {
 		t.Error("Expected true without error, got ", is, err)
 	}
