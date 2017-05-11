@@ -117,7 +117,7 @@ func (d GVfsDriver) saveConfig() error {
 	cfgFolder := "/etc/docker-volumes/gvfs/"
 	fi, err := os.Lstat(cfgFolder)
 	if os.IsNotExist(err) {
-		if err := os.MkdirAll(cfgFolder, 0755); err != nil {
+		if err = os.MkdirAll(cfgFolder, 0700); err != nil {
 			return err
 		}
 	} else if err != nil {
@@ -145,7 +145,7 @@ func (d GVfsDriver) startFuseDeamon() error {
 
 	fi, err := os.Lstat(d.root)
 	if os.IsNotExist(err) {
-		if err := os.MkdirAll(d.root, 0755); err != nil {
+		if err = os.MkdirAll(d.root, 0700); err != nil {
 			return err
 		}
 	} else if err != nil {
@@ -161,10 +161,7 @@ func (d GVfsDriver) startFuseDeamon() error {
 	}
 
 	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o %s", d.root, d.fuseOpts)) //Start ftp handler
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // start deamon in context of this gvfs drive with custome env
