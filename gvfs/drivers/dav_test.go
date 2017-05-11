@@ -25,7 +25,7 @@ func TestDAVURLSSL(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,ssl=true,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,ssl=true,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,ssl=true,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 
@@ -34,7 +34,7 @@ func TestDAVURLSSLTraillingSlash(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,ssl=true,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,ssl=true,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,ssl=true,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 
@@ -43,7 +43,7 @@ func TestDAVURLSSLUser(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,ssl=true,user=user,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,ssl=true,user=user,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,ssl=true,user=user,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 
@@ -52,7 +52,7 @@ func TestDAVURLSSLDefaultPort(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,ssl=true,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,ssl=true,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,ssl=true,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestDAVURLSSLCustomPort(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,port=4443,ssl=true,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,port=4443,ssl=true,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,port=4443,ssl=true,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestDAVURLDefault(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,ssl=false,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,ssl=false,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,ssl=false,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 
@@ -79,7 +79,7 @@ func TestDAVURLUser(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,ssl=false,user=user,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,ssl=false,user=user,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,ssl=false,user=user,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 
@@ -88,7 +88,7 @@ func TestDAVURLDefaultPort(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,ssl=false,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,ssl=false,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,ssl=false,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 
@@ -97,7 +97,7 @@ func TestDAVURLIP(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=10.0.0.1,ssl=false,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=10.0.0.1,ssl=false,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=10.0.0.1,ssl=false,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
 func TestDAVURLCustomPort(t *testing.T) {
@@ -105,6 +105,6 @@ func TestDAVURLCustomPort(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != "dav:host=host,port=8080,ssl=false,prefix=%2Fsome%2Fpath" {
-		t.Error("Expected dav:host=host,port=8080,ssl=false,prefix=%2Fsome%2Fpath, got ", m, err)
+		t.Error("Expected dav:host=host,port=8080,ssl=false,prefix=%%2Fsome%%2Fpath, got ", m, err)
 	}
 }
