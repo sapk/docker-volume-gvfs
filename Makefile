@@ -140,7 +140,8 @@ docs:
 	@godoc -http=:$(DOC_PORT)
 
 lint: dev-deps
-	gometalinter --deadline=5m --concurrency=2 --vendor ./...
+	gometalinter --deadline=5m --concurrency=2 --vendor --disable=gotype ./...
+#	gometalinter --deadline=5m --concurrency=2 --vendor ./... # disable gotype temporary
 
 dev-deps:
 	@echo -e "$(OK_COLOR)==> Installing developement dependencies...$(NO_COLOR)"
