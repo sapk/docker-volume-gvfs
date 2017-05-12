@@ -67,7 +67,9 @@ func Start() {
 	setupFlags()
 	rootCmd.Long = fmt.Sprintf(longHelp, Version, Branch, Commit, BuildTime)
 	rootCmd.AddCommand(versionCmd, daemonCmd)
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func typeOrEnv(cmd *cobra.Command, flag, envname string) string {
