@@ -2,7 +2,8 @@
     "description": "GVfs plugin for Docker",
     "documentation": "https://docs.docker.com/engine/extend/plugins/",
     "entrypoint": [
-        "/usr/bin/docker-volume-gvfs"
+        "/usr/bin/docker-volume-gvfs",
+        "daemon"
     ],
     "env": [
         {
