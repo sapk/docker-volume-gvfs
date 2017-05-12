@@ -5,8 +5,11 @@ APP_VERSION=$(shell git describe --abbrev=0)
 APP_USERREPO=github.com/sapk
 APP_PACKAGE=$(APP_USERREPO)/docker-volume-gvfs
 
-PLUGIN_NAME ?= sapk/$(APP_NAME)
+
+PLUGIN_USER ?= sapk
+PLUGIN_NAME ?= $(APP_NAME)
 PLUGIN_TAG ?= latest
+PLUGIN_IMAGE ?= $(PLUGIN_USER)/$(PLUGIN_NAME):$(PLUGIN_TAG)
 
 GIT_HASH=$(shell git rev-parse --short HEAD)
 GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
@@ -39,32 +42,32 @@ build: deps clean format compile
 docker-plugin: docker-rootfs docker-plugin-create docker-plugin-enable
 
 docker-image:
-	@echo -e "$(OK_COLOR)==> Docker build image$(NO_COLOR)"
-	@docker build -q -t ${PLUGIN_NAME}:${PLUGIN_TAG} support/docker
+	@echo -e "$(OK_COLOR)==> Docker build image : ${PLUGIN_IMAGE} $(NO_COLOR)"
+	@docker build -q -t ${PLUGIN_IMAGE} support/docker
 	
 docker-rootfs: docker-image
 	@echo -e "$(OK_COLOR)==> create rootfs directory in ./plugin/rootfs$(NO_COLOR)"
 	@mkdir -p ./plugin/rootfs
-	@cntr=${PLUGIN_NAME}-${PLUGIN_TAG}-$$(date +'%Y%m%d-%H%M%S'); \
-	docker create --name $$cntr ${PLUGIN_NAME}:${PLUGIN_TAG}; \
+	@cntr=${PLUGIN_USER}-${PLUGIN_NAME}-${PLUGIN_TAG}-$$(date +'%Y%m%d-%H%M%S'); \
+	docker create --name $$cntr ${PLUGIN_IMAGE}; \
 	docker export $$cntr | tar -x -C ./plugin/rootfs; \
 	docker rm -vf $$cntr
 	@echo -e "### copy config.json to ./plugin/$(NO_COLOR)"
 	@cp config.json ./plugin/
 	
 docker-plugin-create:
-	@echo -e "$(OK_COLOR)==> Remove existing plugin ${PLUGIN_NAME}:${PLUGIN_TAG} if exists$(NO_COLOR)"
-	@docker plugin rm -f ${PLUGIN_NAME}:${PLUGIN_TAG} || true
-	@echo -e "$(OK_COLOR)==> Create new plugin ${PLUGIN_NAME}:${PLUGIN_TAG} from ./plugin$(NO_COLOR)"
-	@docker plugin create ${PLUGIN_NAME}:${PLUGIN_TAG} ./plugin
+	@echo -e "$(OK_COLOR)==> Remove existing plugin : ${PLUGIN_IMAGE} if exists$(NO_COLOR)"
+	@docker plugin rm -f ${PLUGIN_IMAGE} || true
+	@echo -e "$(OK_COLOR)==> Create new plugin : ${PLUGIN_IMAGE} from ./plugin$(NO_COLOR)"
+	@docker plugin create ${PLUGIN_IMAGE} ./plugin
 
 docker-plugin-push:
-	@echo -e "$(OK_COLOR)==> push plugin ${PLUGIN_NAME}:${PLUGIN_TAG}$(NO_COLOR)"
-	@docker plugin push ${PLUGIN_NAME}:${PLUGIN_TAG}
+	@echo -e "$(OK_COLOR)==> push plugin : ${PLUGIN_IMAGE}$(NO_COLOR)"
+	@docker plugin push ${PLUGIN_IMAGE}
 	
 docker-plugin-enable:
-	@echo -e "$(OK_COLOR)==> Enable plugin ${PLUGIN_NAME}:${PLUGIN_TAG}$(NO_COLOR)"
-	@docker plugin enable ${PLUGIN_NAME}:${PLUGIN_TAG}
+	@echo -e "$(OK_COLOR)==> Enable plugin ${PLUGIN_IMAGE}$(NO_COLOR)"
+	@docker plugin enable ${PLUGIN_IMAGE}
 
 set-build:
 	@if [ ! -d $(PWD)/.gopath/src/$(APP_USERREPO) ]; then mkdir -p $(PWD)/.gopath/src/$(APP_USERREPO); fi
