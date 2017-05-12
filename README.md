@@ -51,6 +51,15 @@ docker run -v test:/mnt --rm -ti ubuntu
 ```
 NB : For mounting SSH/SFTP it is usefull to set a [ssh_config](https://linux.die.net/man/5/ssh_config) file for the running user in order to use a ssh key as authentification.
 
+
+## Docker plugin (New)
+```
+docker plugin install sapk/plugin-gvfs
+docker volume create --driver sapk/plugin-gvfs --opt url=ftp://user@url --opt password=pass --name test
+docker run -v test:/mnt --rm -ti ubuntu
+```
+
+
 ## Known bug:
 If when trying to start a container you get this error :
 
