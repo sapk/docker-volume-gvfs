@@ -31,6 +31,10 @@ before_deploy:
   - make compress
   - docker --version
   - make docker-plugin
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+    docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+    docker-plugin-push;
+    fi
   
 deploy:
   provider: releases
