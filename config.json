@@ -29,16 +29,6 @@
             }
         ]
     },
-    "mounts": [
-        {
-            "destination": "/etc/docker-volumes/gvfs",
-            "options": [
-                "rbind"
-            ],
-            "source": "/var/lib/docker/plugins/",
-            "type": "bind"
-        }
-    ],
     "network": {
         "type": "host"
     },
