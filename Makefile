@@ -7,7 +7,7 @@ APP_PACKAGE=$(APP_USERREPO)/docker-volume-gvfs
 
 
 PLUGIN_USER ?= sapk
-PLUGIN_NAME ?= $(APP_NAME)
+PLUGIN_NAME ?= plugin-gvfs
 PLUGIN_TAG ?= latest
 PLUGIN_IMAGE ?= $(PLUGIN_USER)/$(PLUGIN_NAME):$(PLUGIN_TAG)
 
