@@ -40,7 +40,7 @@ docker-plugin: docker-rootfs docker-plugin-create docker-plugin-enable
 
 docker-image:
 	@echo -e "$(OK_COLOR)==> Docker build image$(NO_COLOR)"
-	@docker build -q -t ${PLUGIN_NAME}:${PLUGIN_TAG} -f .support/docker/Dockerfile /dev/null
+	@docker build -q -t ${PLUGIN_NAME}:${PLUGIN_TAG} support/docker
 	
 docker-rootfs: docker-image
 	@echo -e "$(OK_COLOR)==> create rootfs directory in ./plugin/rootfs$(NO_COLOR)"
