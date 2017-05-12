@@ -3,7 +3,7 @@
 APP_NAME=docker-volume-gvfs
 APP_VERSION=$(shell git describe --abbrev=0)
 APP_USERREPO=github.com/sapk
-APP_PACKAGE=$(APP_USERREPO)/docker-volume-gvfs
+APP_PACKAGE=$(APP_USERREPO)/$(APP_NAME)
 
 
 PLUGIN_USER ?= sapk
