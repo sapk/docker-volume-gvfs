@@ -32,7 +32,7 @@ before_deploy:
   - docker --version
   - make docker-plugin
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"; fi
-  - docker-plugin-push
+  - make docker-plugin-push
   
 deploy:
   provider: releases
