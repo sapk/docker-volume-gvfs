@@ -118,14 +118,14 @@ release: clean set-build deps format
 	@tar -zcvf build/$(ARCHIVE) LICENSE README.md build/
 
 clean:
-	@if [ -x docker-volume-gvfs ]; then rm docker-volume-gvfs; fi
+	@if [ -x $(APP_NAME) ]; then rm $(APP_NAME); fi
 	@if [ -d build ]; then rm -R build; fi
 	@if [ -d $(FAKE_GOPATH) ]; then rm -R $(FAKE_GOPATH); fi
 	@rm -rf ./plugin
 
 compress:
 	@echo -e "$(OK_COLOR)==> Trying to compress binary ...$(NO_COLOR)"
-	@upx --brute docker-volume-gvfs || upx-ucl --brute docker-volume-gvfs || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
+	@upx --brute $(APP_NAME) || upx-ucl --brute $(APP_NAME) || echo -e "$(WARN_COLOR)==> No tools found to compress binary.$(NO_COLOR)"
 
 format:
 	@echo -e "$(OK_COLOR)==> Formatting...$(NO_COLOR)"
