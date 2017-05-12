@@ -10,7 +10,7 @@ RUN apk --no-cache --no-progress --force add \
  && mv ./docker-volume-gvfs /usr/bin/docker-volume-gvfs \
  && cd && rm -r /usr/share/docker-volume-gvfs \
  && apk del --purge build-tools make gcc go musl-dev git \
- && mkdir /var/lib/docker-volumes/gvfs \
+ && mkdir -p /var/lib/docker-volumes/gvfs \
  && rm -rf $GOPATH /var/cache/apk/*
 
 ENTRYPOINT [ "/usr/bin/docker-volume-gvfs" ]
