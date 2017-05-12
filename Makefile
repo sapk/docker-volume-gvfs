@@ -140,7 +140,7 @@ docs:
 	@godoc -http=:$(DOC_PORT)
 
 lint: dev-deps
-	gometalinter --deadline=5m --concurrency=2 --errors --vendor --disable=gotype ./...
+	gometalinter --deadline=5m --concurrency=2 --vendor --disable=gotype --errors ./...
 	gometalinter --deadline=5m --concurrency=2 --vendor --disable=gotype ./... || echo "Something could be improved !"
 #	gometalinter --deadline=5m --concurrency=2 --vendor ./... # disable gotype temporary
 
