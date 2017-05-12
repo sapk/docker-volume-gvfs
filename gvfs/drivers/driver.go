@@ -201,7 +201,9 @@ func (d *GVfsDriver) Create(r volume.Request) volume.Response {
 
 	d.volumes[r.Name] = v
 	log.Debugf("Volume Created: %v", v)
-	d.saveConfig()
+	if err = d.saveConfig(); err != nil {
+		return volume.Response{Err: err.Error()}
+	}
 	return volume.Response{}
 }
 
@@ -219,7 +221,9 @@ func (d *GVfsDriver) Remove(r volume.Request) volume.Response {
 		delete(d.volumes, r.Name)
 		return volume.Response{}
 	}
-	d.saveConfig()
+	if err := d.saveConfig(); err != nil {
+		return volume.Response{Err: err.Error()}
+	}
 	return volume.Response{Err: fmt.Sprintf("volume %s is currently used by a container", r.Name)}
 }
 
@@ -332,7 +336,9 @@ func (d *GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 		}
 	}
 
-	d.saveConfig()
+	if err := d.saveConfig(); err != nil {
+		return volume.Response{Err: err.Error()}
+	}
 	return volume.Response{Mountpoint: v.Mountpoint}
 }
 
@@ -358,7 +364,9 @@ func (d *GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 		v.connections--
 	}
 
-	d.saveConfig()
+	if err := d.saveConfig(); err != nil {
+		return volume.Response{Err: err.Error()}
+	}
 	return volume.Response{}
 }
 
