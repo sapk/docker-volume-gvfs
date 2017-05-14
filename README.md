@@ -74,8 +74,4 @@ docker run -v test:/mnt:nocopy --rm -ti ubuntu
 
 ## Inspired from :
  - https://github.com/ContainX/docker-volume-netshare/
- - https://github.com/vieux/docker-volume-sshfs/
-
-## TODO :
- - Add test for differents backends (ftp, ssh, smb, dav, ...)
- - Add to docker hub as a plugin (https://docs.docker.com/engine/reference/commandline/plugin_create/)
+ - https://github.com/vieux/docker-volume-sshfs
