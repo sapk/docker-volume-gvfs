@@ -59,6 +59,16 @@ docker volume create --driver sapk/plugin-gvfs --opt url=ftp://user@url --opt pa
 docker run -v test:/mnt --rm -ti ubuntu
 ```
 
+## Docker-compose
+```
+volumes:
+  some_vol:
+    driver: sapk/plugin-gvfs
+    driver_opts:
+      url: "ftp://user@url"
+      password: "pass"
+```
+
 
 ## Known bug:
 If when trying to start a container you get this error :
