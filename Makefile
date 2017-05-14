@@ -1,7 +1,7 @@
 #Inspired from : https://github.com/littlemanco/boilr-makefile/blob/master/template/Makefile, https://github.com/geetarista/go-boilerplate/blob/master/Makefile, https://github.com/nascii/go-boilerplate/blob/master/GNUmakefile https://github.com/cloudflare/hellogopher/blob/master/Makefile
 #PATH=$(PATH:):$(GOPATH)/bin
 APP_NAME=docker-volume-gvfs
-APP_VERSION=$(shell git describe --abbrev=0)
+APP_VERSION=$(shell git describe --tags --abbrev=0)
 APP_USERREPO=github.com/sapk
 APP_PACKAGE=$(APP_USERREPO)/$(APP_NAME)
 
@@ -20,7 +20,7 @@ ARCHIVE=$(APP_NAME)-$(APP_VERSION)-$(GIT_HASH).tar.gz
 #DEPS = $(go list -f '{{range .TestImports}}{{.}} {{end}}' ./...)
 LDFLAGS = \
   -s -w \
-  -X main.Version=$(APP_VERSION}) -X main.Branch=$(GIT_BRANCH) -X main.Commit=$(GIT_HASH) -X main.BuildTime=$(DATE)
+  -X main.Version=$(APP_VERSION) -X main.Branch=$(GIT_BRANCH) -X main.Commit=$(GIT_HASH) -X main.BuildTime=$(DATE)
 
 FAKE_GOPATH = $(PWD)/.gopath
 FAKE_PACKAGE = $(FAKE_GOPATH)/src/$(APP_PACKAGE)
@@ -44,7 +44,7 @@ docker-plugin: docker-rootfs docker-plugin-create
 docker-image:
 	@echo -e "$(OK_COLOR)==> Docker build image : ${PLUGIN_IMAGE} $(NO_COLOR)"
 	@docker build -q -t ${PLUGIN_IMAGE} support/docker
-	
+
 docker-rootfs: docker-image
 	@echo -e "$(OK_COLOR)==> create rootfs directory in ./plugin/rootfs$(NO_COLOR)"
 	@mkdir -p ./plugin/rootfs
@@ -54,7 +54,7 @@ docker-rootfs: docker-image
 	docker rm -vf $$cntr
 	@echo -e "### copy config.json to ./plugin/$(NO_COLOR)"
 	@cp config.json ./plugin/
-	
+
 docker-plugin-create:
 	@echo -e "$(OK_COLOR)==> Remove existing plugin : ${PLUGIN_IMAGE} if exists$(NO_COLOR)"
 	@docker plugin rm -f ${PLUGIN_IMAGE} || true
@@ -64,7 +64,7 @@ docker-plugin-create:
 docker-plugin-push:
 	@echo -e "$(OK_COLOR)==> push plugin : ${PLUGIN_IMAGE}$(NO_COLOR)"
 	@docker plugin push ${PLUGIN_IMAGE}
-	
+
 docker-plugin-enable:
 	@echo -e "$(OK_COLOR)==> Enable plugin ${PLUGIN_IMAGE}$(NO_COLOR)"
 	@docker plugin enable ${PLUGIN_IMAGE}
