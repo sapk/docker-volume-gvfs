@@ -26,7 +26,7 @@ func TestDAVURLSSL(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 
@@ -36,7 +36,7 @@ func TestDAVURLSSLTraillingSlash(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 
@@ -46,7 +46,7 @@ func TestDAVURLSSLUser(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 
@@ -56,7 +56,7 @@ func TestDAVURLSSLDefaultPort(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 
@@ -66,7 +66,7 @@ func TestDAVURLSSLCustomPort(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 
@@ -76,7 +76,7 @@ func TestDAVURLDefault(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 
@@ -86,7 +86,7 @@ func TestDAVURLUser(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 
@@ -96,7 +96,7 @@ func TestDAVURLDefaultPort(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 
@@ -106,7 +106,7 @@ func TestDAVURLIP(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
 func TestDAVURLCustomPort(t *testing.T) {
@@ -115,6 +115,6 @@ func TestDAVURLCustomPort(t *testing.T) {
 	tmp := DavVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
 	if err != nil || m != expected {
-		t.Error("Expected ", expected,", got ", m, err)
+		t.Error("Expected ", expected, ", got ", m, err)
 	}
 }
