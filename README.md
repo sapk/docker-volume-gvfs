@@ -15,7 +15,7 @@ Dedends on gvfs and gvfsd-fuse (so dbus indirectly)
 Packages : [![Archlinux](https://img.shields.io/badge/Archlinux-AUR-blue.svg)](https://aur.archlinux.org/packages/docker-volume-gvfs-git/)
 
 Working: SSH/SFTP/DAV/DAVS/FTP  
-In Progress: FTPS/NFS/SMB/CIFS/...
+In Progress/Not tested: FTPS/NFS/SMB/CIFS/...
 ## Build
 ```
 make
