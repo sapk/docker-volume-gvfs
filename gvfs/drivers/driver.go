@@ -287,7 +287,7 @@ func (d *GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 		return volume.Response{Mountpoint: v.Mountpoint}
 	}
 
-	cmd := fmt.Sprintf("gvfs-mount %s", v.URL)
+	cmd := fmt.Sprintf("gio mount %s", v.URL)
 	if v.Password != "" {
 		p := setEnv(cmd, d.env)
 		inStd, err := p.StdinPipe()
@@ -355,7 +355,7 @@ func (d *GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
 	}
 	if v.connections <= 1 {
-		cmd := fmt.Sprintf("gvfs-mount -u %s", v.URL)
+		cmd := fmt.Sprintf("gio mount -u %s", v.URL)
 		if err := d.runCmd(cmd); err != nil {
 			return volume.Response{Err: err.Error()}
 		}
