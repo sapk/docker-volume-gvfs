@@ -1,13 +1,14 @@
 FROM alpine:latest
 MAINTAINER Antoine GIRARD <antoine.girard@sapk.fr>
 
-ENV GOPATH=/usr/share/docker-volume-gvfs
-
-ADD . ${GOPATH}
+ENV GOPATH=/go
 
 RUN apk --no-cache --no-progress --force add \
-          build-tools make gcc go musl-dev git ca-certificates dbus dbus-x11 gvfs gvfs-fuse gvfs-dav gvfs-smb openssh-client\
- && cd $GOPATH && make \
+          build-tools make gcc go musl-dev git ca-certificates dbus dbus-x11 gvfs gvfs-fuse gvfs-dav gvfs-smb openssh-client
+
+ADD . ${GOPATH}/src/github.com/sapk/docker-volume-gvfs
+
+RUN cd $GOPATH/src/github.com/sapk/docker-volume-gvfs && make \
  && mv ./docker-volume-gvfs /usr/bin/docker-volume-gvfs \
  && cd && mkdir -p /var/lib/docker-volumes/gvfs /root/.ssh \
  && apk del --purge build-tools make gcc go musl-dev git \

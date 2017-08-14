@@ -8,12 +8,6 @@
   version = "v0.4.5"
 
 [[projects]]
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  revision = "a3f95b5c423586578a4e099b11a46c2479628cac"
-  version = "1.0.2"
-
-[[projects]]
   name = "github.com/coreos/go-systemd"
   packages = ["activation"]
   revision = "d2196463941895ee908e13531a23a39feb9e1243"
@@ -22,8 +16,7 @@
 [[projects]]
   name = "github.com/docker/go-connections"
   packages = ["sockets"]
-  revision = "990a1a1a70b0da4c4cb70e117971a4f0babfbf1a"
-  version = "v0.2.1"
+  revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
 
 [[projects]]
   branch = "master"
@@ -62,12 +55,6 @@
   revision = "d0303fe809921458f417bcf828397a65db30a7e4"
 
 [[projects]]
-  name = "github.com/opencontainers/runc"
-  packages = ["libcontainer/user"]
-  revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
-  version = "v0.1.1"
-
-[[projects]]
   name = "github.com/pelletier/go-buffruneio"
   packages = ["."]
   revision = "c37440a7cf42ac63b919c752ca73a85067e05992"
@@ -80,10 +67,10 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "a3f95b5c423586578a4e099b11a46c2479628cac"
-  version = "1.0.2"
+  revision = "181d419aa9e2223811b824e8f0b4af96f9ba9302"
 
 [[projects]]
   branch = "master"
@@ -123,6 +110,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  revision = "b176d7def5d71bdd214203491f89843ed217f420"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = ["proxy"]
   revision = "1c05540f6879653db88113bc4a2b70aec4bd491f"
@@ -148,6 +141,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c85ec5ad98317e75dd73ae7b42cc27eea1af0831b6055a34f01a814f40669e73"
+  inputs-digest = "ed8a3da3e6102cf2c992cd34137c1c3758f22ed076b32c63d69e4d26693745be"
   solver-name = "gps-cdcl"
   solver-version = 1

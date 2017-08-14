@@ -138,11 +138,11 @@ test: deps format
 	go test -v -race -coverprofile=coverage.out -covermode=atomic ./gvfs/drivers
 	go tool cover -html=coverage.out -o coverage.html
 
-docs:
+docs: deps
 	@echo -e "$(OK_COLOR)==> Serving docs at http://localhost:$(DOC_PORT).$(NO_COLOR)"
 	@godoc -http=:$(DOC_PORT)
 
-lint: dev-deps
+lint: deps
 	gometalinter --deadline=5m --concurrency=2 --vendor --disable=gotype --errors ./...
 	gometalinter --deadline=5m --concurrency=2 --vendor --disable=gotype ./... || echo "Something could be improved !"
 #	gometalinter --deadline=5m --concurrency=2 --vendor ./... # disable gotype temporary
@@ -165,7 +165,7 @@ update-dev-deps:
 
 deps: dev-deps
 	@echo -e "$(OK_COLOR)==> Installing dependencies ...$(NO_COLOR)"
-	$(GOPATH)/bin/dep ensure
+	$(GOPATH)/bin/dep ensure -vendor-only
 
 update-deps: dev-deps
 	@echo -e "$(OK_COLOR)==> Updating all dependencies ...$(NO_COLOR)"
