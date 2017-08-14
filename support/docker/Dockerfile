@@ -9,7 +9,7 @@ RUN apk --no-cache --no-progress --force add \
           build-tools make gcc go musl-dev git ca-certificates dbus dbus-x11 gvfs gvfs-fuse gvfs-dav gvfs-smb openssh-client\
  && cd $GOPATH && make \
  && mv ./docker-volume-gvfs /usr/bin/docker-volume-gvfs \
- && cd && mkdir -p /var/lib/docker-volumes/gvfs \
+ && cd && mkdir -p /var/lib/docker-volumes/gvfs /root/.ssh \
  && apk del --purge build-tools make gcc go musl-dev git \
  && rm -rf $GOPATH /var/cache/apk/*
 
