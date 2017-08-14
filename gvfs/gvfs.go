@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/sapk/docker-volume-gvfs/gvfs/drivers"
 	"github.com/spf13/cobra"
