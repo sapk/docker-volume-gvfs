@@ -34,7 +34,7 @@
         "type": "host"
     },
     "mounts": [
-        {"name": "known_hosts", "description": "Contain ssh fingerprint", "source": "/etc/docker-volumes/gvfs/known_hosts", "destination": "/root/.ssh/known_hosts", "type": "bind"}
+        {"name": "known_hosts", "description": "Contain ssh fingerprint", "source": "/etc/docker-volumes/gvfs/.ssh", "destination": "/root/.ssh", "type": "bind"}
     ],
     "propagatedmount": "/var/lib/docker-volumes/gvfs"
 }
