@@ -37,7 +37,7 @@ WARN_COLOR=\033[33;01m
 
 all: deps test build compress done
 
-build: clean format compile
+build: clean compile
 
 docker-plugin: docker-rootfs docker-plugin-create
 

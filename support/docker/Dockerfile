@@ -8,7 +8,7 @@ RUN apk --no-cache --no-progress --force add \
 
 ADD . ${GOPATH}/src/github.com/sapk/docker-volume-gvfs
 
-RUN cd $GOPATH/src/github.com/sapk/docker-volume-gvfs && make \
+RUN cd $GOPATH/src/github.com/sapk/docker-volume-gvfs && make build \
  && mv ./docker-volume-gvfs /usr/bin/docker-volume-gvfs \
  && cd && mkdir -p /var/lib/docker-volumes/gvfs /root/.ssh \
  && apk del --purge build-tools make gcc go musl-dev git \
