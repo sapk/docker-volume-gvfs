@@ -37,7 +37,7 @@ WARN_COLOR=\033[33;01m
 
 all: build compress done
 
-build: deps clean format compile
+build: clean format compile
 
 docker-plugin: docker-rootfs docker-plugin-create
 
@@ -138,11 +138,11 @@ test: deps format
 	go test -v -race -coverprofile=coverage.out -covermode=atomic ./gvfs/drivers
 	go tool cover -html=coverage.out -o coverage.html
 
-docs: deps
+docs:
 	@echo -e "$(OK_COLOR)==> Serving docs at http://localhost:$(DOC_PORT).$(NO_COLOR)"
 	@godoc -http=:$(DOC_PORT)
 
-lint: deps
+lint:
 	gometalinter --deadline=5m --concurrency=2 --vendor --disable=gotype --errors ./...
 	gometalinter --deadline=5m --concurrency=2 --vendor --disable=gotype ./... || echo "Something could be improved !"
 #	gometalinter --deadline=5m --concurrency=2 --vendor ./... # disable gotype temporary

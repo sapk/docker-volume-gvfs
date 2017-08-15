@@ -23,3 +23,6 @@
   revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
   name = "github.com/docker/go-connections"
 
+[[override]]
+  revision = "4da3e2cfbabc9f751898f250b49f2439785783a1"
+  name = "github.com/fsnotify/fsnotify"

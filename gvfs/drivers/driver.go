@@ -13,9 +13,10 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/spf13/viper"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -177,18 +178,18 @@ func (d *GVfsDriver) runCmd(cmd string) error {
 }
 
 //Create create and init the requested volume
-func (d *GVfsDriver) Create(r volume.Request) volume.Response {
+func (d *GVfsDriver) Create(r *volume.CreateRequest) error {
 	log.Debugf("Entering Create: name: %s, options %v", r.Name, r.Options)
 	d.Lock()
 	defer d.Unlock()
 
 	if r.Options == nil || r.Options["url"] == "" {
-		return volume.Response{Err: "url option required"}
+		return fmt.Errorf("url option required")
 	}
 
 	dr, m, err := getDriver(r.Options["url"])
 	if err != nil {
-		return volume.Response{Err: err.Error()}
+		return err
 	}
 
 	v := &gvfsVolume{
@@ -202,34 +203,14 @@ func (d *GVfsDriver) Create(r volume.Request) volume.Response {
 	d.volumes[r.Name] = v
 	log.Debugf("Volume Created: %v", v)
 	if err = d.saveConfig(); err != nil {
-		return volume.Response{Err: err.Error()}
+		return err
 	}
-	return volume.Response{}
+	return nil
 }
 
-//Remove remove the requested volume
-func (d *GVfsDriver) Remove(r volume.Request) volume.Response {
-	log.Debugf("Entering Remove: name: %s, options %v", r.Name, r.Options)
-	d.Lock()
-	defer d.Unlock()
-	v, ok := d.volumes[r.Name]
-
-	if !ok {
-		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
-	}
-	if v.connections == 0 {
-		delete(d.volumes, r.Name)
-		return volume.Response{}
-	}
-	if err := d.saveConfig(); err != nil {
-		return volume.Response{Err: err.Error()}
-	}
-	return volume.Response{Err: fmt.Sprintf("volume %s is currently used by a container", r.Name)}
-}
-
-//List volumes handled by thos driver
-func (d *GVfsDriver) List(r volume.Request) volume.Response {
-	log.Debugf("Entering List: name: %s, options %v", r.Name, r.Options)
+//List volumes handled by these driver
+func (d *GVfsDriver) List() (*volume.ListResponse, error) {
+	log.Debugf("Entering List")
 
 	d.Lock()
 	defer d.Unlock()
@@ -239,52 +220,72 @@ func (d *GVfsDriver) List(r volume.Request) volume.Response {
 		vols = append(vols, &volume.Volume{Name: name, Mountpoint: v.Mountpoint})
 		log.Debugf("Volume found: %s", v)
 	}
-	return volume.Response{Volumes: vols}
+	return &volume.ListResponse{Volumes: vols}, nil
 }
 
 //Get get info on the requested volume
-func (d *GVfsDriver) Get(r volume.Request) volume.Response {
+func (d *GVfsDriver) Get(r *volume.GetRequest) (*volume.GetResponse, error) {
 	log.Debugf("Entering Get: name: %s", r.Name)
 	d.Lock()
 	defer d.Unlock()
 
 	v, ok := d.volumes[r.Name]
 	if !ok {
-		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
+		return nil, fmt.Errorf("volume %s not found", r.Name)
 	}
 
 	log.Debugf("Volume found: %s", v)
-	return volume.Response{Volume: &volume.Volume{Name: r.Name, Mountpoint: v.Mountpoint}}
+	return &volume.GetResponse{Volume: &volume.Volume{Name: r.Name, Mountpoint: v.Mountpoint}}, nil
+}
+
+//Remove remove the requested volume
+func (d *GVfsDriver) Remove(r *volume.RemoveRequest) error {
+	log.Debugf("Entering Remove: name: %s", r.Name)
+	d.Lock()
+	defer d.Unlock()
+	v, ok := d.volumes[r.Name]
+
+	if !ok {
+		return fmt.Errorf("volume %s not found", r.Name)
+	}
+	if v.connections == 0 {
+		delete(d.volumes, r.Name)
+		return nil
+	}
+	if err := d.saveConfig(); err != nil {
+		return err
+	}
+	return fmt.Errorf("volume %s is currently used by a container", r.Name)
 }
 
 //Path get path of the requested volume
-func (d *GVfsDriver) Path(r volume.Request) volume.Response {
+func (d *GVfsDriver) Path(r *volume.PathRequest) (*volume.PathResponse, error) {
 	log.Debugf("Entering Path: name: %s, options %v", r.Name)
 
 	d.RLock()
 	defer d.RUnlock()
 	v, ok := d.volumes[r.Name]
 	if !ok {
-		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
+		return nil, fmt.Errorf("volume %s not found", r.Name)
 	}
 	log.Debugf("Volume found: %s", v)
-	return volume.Response{Mountpoint: v.Mountpoint}
+	return &volume.PathResponse{Mountpoint: v.Mountpoint}, nil
 }
 
 //Mount mount the requested volume
-func (d *GVfsDriver) Mount(r volume.MountRequest) volume.Response {
+func (d *GVfsDriver) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	log.Debugf("Entering Mount: %v", r)
 	d.Lock()
 	defer d.Unlock()
 
 	v, ok := d.volumes[r.Name]
 	if !ok {
-		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
+		return nil, fmt.Errorf("volume %s not found", r.Name)
 	}
 
 	if v.connections > 0 {
 		v.connections++
-		return volume.Response{Mountpoint: v.Mountpoint}
+		return &volume.MountResponse{Mountpoint: v.Mountpoint}, nil
 	}
 
 	cmd := fmt.Sprintf("gio mount %s", v.URL)
@@ -292,7 +293,7 @@ func (d *GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 		p := setEnv(cmd, d.env)
 		inStd, err := p.StdinPipe()
 		if err != nil { //Get a input buffer
-			return volume.Response{Err: err.Error()}
+			return nil, err
 		}
 		var outStd bytes.Buffer
 		p.Stdout = &outStd
@@ -300,7 +301,7 @@ func (d *GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 		p.Stderr = &errStd
 
 		if err := p.Start(); err != nil {
-			return volume.Response{Err: err.Error()}
+			return nil, err
 		}
 		inStd.Write([]byte(v.Password + "\n")) //Send password to process + Send return line
 
@@ -316,7 +317,7 @@ func (d *GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 			p.Process.Kill()
 			log.Debugf("out : %s", sOut)
 			log.Debugf("outErr : %s", sErr)
-			return volume.Response{Err: fmt.Sprintf("The command %s timeout", cmd)}
+			return nil, fmt.Errorf("The command %s timeout", cmd)
 		case <-donec:
 			sOut := outStd.String()
 			sErr := errStd.String()
@@ -325,26 +326,26 @@ func (d *GVfsDriver) Mount(r volume.MountRequest) volume.Response {
 			log.Debugf("outErr : %s", sErr)
 			// handle erros like : "Error mounting location: Location is already mounted" or Error mounting location: Could not connect to 10.8.0.7: No route to host
 			if strings.Contains(sErr, "Error mounting location") {
-				return volume.Response{Err: fmt.Sprintf("Error mounting location : %s", sErr)}
+				return nil, fmt.Errorf("Error mounting location : %s", sErr)
 			}
 			v.connections++
 			break
 		}
 	} else {
 		if err := d.runCmd(cmd); err != nil {
-			return volume.Response{Err: err.Error()}
+			return nil, err
 		}
 	}
 
 	if err := d.saveConfig(); err != nil {
-		return volume.Response{Err: err.Error()}
+		return nil, err
 	}
-	return volume.Response{Mountpoint: v.Mountpoint}
+	return &volume.MountResponse{Mountpoint: v.Mountpoint}, nil
 }
 
 //Unmount unmount the requested volume
 //TODO Monitor for unmount to remount ?
-func (d *GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
+func (d *GVfsDriver) Unmount(r *volume.UnmountRequest) error {
 	//Execute gvfs-mount -u $params
 	log.Debugf("Entering Unmount: %v", r)
 
@@ -352,12 +353,12 @@ func (d *GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	defer d.Unlock()
 	v, ok := d.volumes[r.Name]
 	if !ok {
-		return volume.Response{Err: fmt.Sprintf("volume %s not found", r.Name)}
+		return fmt.Errorf("volume %s not found", r.Name)
 	}
 	if v.connections <= 1 {
 		cmd := fmt.Sprintf("gio mount -u %s", v.URL)
 		if err := d.runCmd(cmd); err != nil {
-			return volume.Response{Err: err.Error()}
+			return err
 		}
 		v.connections = 0
 	} else {
@@ -365,15 +366,15 @@ func (d *GVfsDriver) Unmount(r volume.UnmountRequest) volume.Response {
 	}
 
 	if err := d.saveConfig(); err != nil {
-		return volume.Response{Err: err.Error()}
+		return err
 	}
-	return volume.Response{}
+	return nil
 }
 
 //Capabilities Send capabilities of the local driver
-func (d *GVfsDriver) Capabilities(r volume.Request) volume.Response {
-	log.Debugf("Entering Capabilities: %v", r)
-	return volume.Response{
+func (d *GVfsDriver) Capabilities() *volume.CapabilitiesResponse {
+	log.Debugf("Entering Capabilities")
+	return &volume.CapabilitiesResponse{
 		Capabilities: volume.Capability{
 			Scope: "local",
 		},
