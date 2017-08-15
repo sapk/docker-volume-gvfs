@@ -32,63 +32,63 @@ func TestSSHSimpleHostURL(t *testing.T) {
 	u, _ := url.Parse("sftp://hostname/")
 	tmp := SSHVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
-	if err != nil || m != "sftp:host=hostname" {
-		t.Error("Expected sftp:host=hostname, got ", m, err)
+	if err != nil || m != "sftp:host=hostname/" {
+		t.Error("Expected sftp:host=hostname/, got ", m, err)
 	}
 }
 func TestSSHSimpleHostSSHURL(t *testing.T) {
 	u, _ := url.Parse("ssh://hostname/")
 	tmp := SSHVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
-	if err != nil || m != "sftp:host=hostname" {
-		t.Error("Expected sftp:host=hostname, got ", m, err)
+	if err != nil || m != "sftp:host=hostname/" {
+		t.Error("Expected sftp:host=hostname/, got ", m, err)
 	}
 }
 func TestSSHCustomPortURL(t *testing.T) {
 	u, _ := url.Parse("sftp://hostname:42/")
 	tmp := SSHVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
-	if err != nil || m != "sftp:host=hostname,port=42" {
-		t.Error("Expected sftp:host=hostname,port=42, got ", m, err)
+	if err != nil || m != "sftp:host=hostname,port=42/" {
+		t.Error("Expected sftp:host=hostname,port=42/, got ", m, err)
 	}
 }
 func TestSSHDefaultPortURL(t *testing.T) {
 	u, _ := url.Parse("sftp://hostname:22/")
 	tmp := SSHVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
-	if err != nil || m != "sftp:host=hostname" {
-		t.Error("Expected sftp:host=hostname, got ", m, err)
+	if err != nil || m != "sftp:host=hostname/" {
+		t.Error("Expected sftp:host=hostname/, got ", m, err)
 	}
 }
 func TestSSHSetUserURL(t *testing.T) {
 	u, _ := url.Parse("sftp://sapk@hostname:42/")
 	tmp := SSHVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
-	if err != nil || m != "sftp:host=hostname,port=42,user=sapk" {
-		t.Error("Expected sftp:host=hostname,port=42,user=sapk, got ", m, err)
+	if err != nil || m != "sftp:host=hostname,port=42,user=sapk/" {
+		t.Error("Expected sftp:host=hostname,port=42,user=sapk/, got ", m, err)
 	}
 }
 func TestSSHSimpleSomePathURL(t *testing.T) {
 	u, _ := url.Parse("sftp://hostname/some/path")
 	tmp := SSHVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
-	if err != nil || m != "sftp:host=hostname" {
-		t.Error("Expected sftp:host=hostname, got ", m, err)
+	if err != nil || m != "sftp:host=hostname/some/path" {
+		t.Error("Expected sftp:host=hostname/some/path, got ", m, err)
 	}
 }
 func TestSSHSimpleSomePathURL2(t *testing.T) {
 	u, _ := url.Parse("ssh://hostname/some/path")
 	tmp := SSHVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
-	if err != nil || m != "sftp:host=hostname" {
-		t.Error("Expected sftp:host=hostname, got ", m, err)
+	if err != nil || m != "sftp:host=hostname/some/path" {
+		t.Error("Expected sftp:host=hostname/some/path, got ", m, err)
 	}
 }
 func TestSSHComplexSomePathURL(t *testing.T) {
 	u, _ := url.Parse("sftp://sapk@hostname:42/some/path")
 	tmp := SSHVolumeDriver{url: u}
 	m, err := tmp.mountpoint()
-	if err != nil || m != "sftp:host=hostname,port=42,user=sapk" {
-		t.Error("Expected sftp:host=hostname,port=42,user=sapk, got ", m, err)
+	if err != nil || m != "sftp:host=hostname,port=42,user=sapk/some/path" {
+		t.Error("Expected sftp:host=hostname,port=42,user=sapk/some/path, got ", m, err)
 	}
 }

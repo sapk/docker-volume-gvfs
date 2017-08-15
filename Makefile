@@ -35,7 +35,7 @@ OK_COLOR=\033[32;01m
 WARN_COLOR=\033[33;01m
 
 
-all: build compress done
+all: deps test build compress done
 
 build: clean format compile
 
@@ -132,7 +132,7 @@ format:
 	go fmt . ./gvfs/...
 #go fmt ./...
 
-test: deps format
+test:
 	@echo -e "$(OK_COLOR)==> Running tests...$(NO_COLOR)"
 	go vet . ./gvfs/... || true
 	go test -v -race -coverprofile=coverage.out -covermode=atomic ./gvfs/drivers
