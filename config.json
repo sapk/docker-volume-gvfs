@@ -33,12 +33,6 @@
     "network": {
         "type": "host"
     },
-    "mounts": [
-        {
-                "type": "bind",
-                "source": "/etc/docker-volumes/gvfs/.ssh",
-                "destination": "/root/.ssh"
-        }
-    ],
+    "mounts": [],
     "propagatedmount": "/var/lib/docker-volumes/gvfs"
 }
