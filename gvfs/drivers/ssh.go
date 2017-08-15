@@ -34,10 +34,10 @@ func (d SSHVolumeDriver) mountpoint() (string, error) {
 	if d.url.User != nil {
 		mount += ",user=" + d.url.User.Username()
 	}
-	/*
-		if d.url.Path != "" {
-			mount += ",prefix=" + url.QueryEscape(strings.TrimRight(d.url.EscapedPath(), "/"))
-		}
-	*/
+
+	if d.url.Path != "" { //Add relative path
+		mount += d.url.Path
+	}
+
 	return mount, nil
 }
