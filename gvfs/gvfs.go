@@ -7,7 +7,7 @@ import (
 
 	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/sapk/docker-volume-gvfs/gvfs/drivers"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +68,7 @@ func Start() {
 	rootCmd.Long = fmt.Sprintf(longHelp, Version, Branch, Commit, BuildTime)
 	rootCmd.AddCommand(versionCmd, daemonCmd)
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 }
 
@@ -83,12 +83,12 @@ func typeOrEnv(cmd *cobra.Command, flag, envname string) string {
 func daemonStart(cmd *cobra.Command, args []string) {
 	dbus := typeOrEnv(cmd, DBusFlag, EnvDBus)
 	driver := drivers.Init(baseDir, dbus, fuseOpts)
-	log.Debug(driver)
+	logrus.Debug(driver)
 	h := volume.NewHandler(driver)
-	log.Debug(h)
+	logrus.Debug(h)
 	err := h.ServeUnix(PluginAlias, 0)
 	if err != nil {
-		log.Debug(err)
+		logrus.Debug(err)
 	}
 }
 
@@ -102,8 +102,8 @@ func setupFlags() {
 
 func setupLogger(cmd *cobra.Command, args []string) {
 	if verbose, _ := cmd.Flags().GetBool(VerboseFlag); verbose {
-		log.SetLevel(log.DebugLevel)
+		logrus.SetLevel(logrus.DebugLevel)
 	} else {
-		log.SetLevel(log.InfoLevel)
+		logrus.SetLevel(logrus.InfoLevel)
 	}
 }
