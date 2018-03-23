@@ -29,6 +29,6 @@ _testmain.go
 /build
 /.gopath
 /plugin
-/vendor/*
+#/vendor/*
 
 /.idea

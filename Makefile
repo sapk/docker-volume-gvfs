@@ -38,7 +38,7 @@ GOPATH ?= $(HOME)/go
 
 all: deps test build compress done
 
-build: clean compile
+build: deps clean format compile
 
 docker-plugin: docker-rootfs docker-plugin-create
 

@@ -1,18 +1,23 @@
-FROM alpine:latest
-MAINTAINER Antoine GIRARD <antoine.girard@sapk.fr>
+FROM golang:alpine AS build-env
 
-ENV GOPATH=/go
+COPY . /go/src/app
+WORKDIR /go/src/app
 
 RUN apk --no-cache --no-progress --force add \
-          build-tools make gcc go musl-dev git ca-certificates dbus dbus-x11 gvfs gvfs-fuse gvfs-dav gvfs-smb openssh-client
+    build-tools make go musl-dev git \
+&&  make build
 
-ADD . ${GOPATH}/src/github.com/sapk/docker-volume-gvfs
+FROM alpine:latest
+LABEL maintainer="Antoine GIRARD <antoine.girard@sapk.fr>"
 
-RUN cd $GOPATH/src/github.com/sapk/docker-volume-gvfs && make build \
- && mv ./docker-volume-gvfs /usr/bin/docker-volume-gvfs \
- && cd && mkdir -p /var/lib/docker-volumes/gvfs /root/.ssh \
- && apk del --purge build-tools make gcc go musl-dev git \
- && rm -rf $GOPATH /var/cache/apk/*
+RUN apk --no-cache --no-progress --force add \
+            ca-certificates dbus dbus-x11 gvfs gvfs-fuse gvfs-dav gvfs-smb openssh-client
+
+RUN mkdir -p /var/lib/docker-volumes/gvfs /root/.ssh
+
+COPY --from=build-env /go/src/app/docker-volume-gvfs /usr/bin/docker-volume-gvfs
+
+RUN /usr/bin/docker-volume-gvfs version
 
 ENTRYPOINT [ "/usr/bin/docker-volume-gvfs" ]
 CMD [ "daemon" ]
