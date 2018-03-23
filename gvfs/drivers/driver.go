@@ -1,381 +1,47 @@
 package drivers
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/docker/go-plugins-helpers/volume"
+	"github.com/sapk/docker-volume-helpers/basic"
+	"github.com/sapk/docker-volume-helpers/driver"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 const (
 	//MountTimeout timeout before killing a mount try in seconds
 	MountTimeout = 30
+	//CfgVersion current config version compat
+	CfgVersion = 1
+	//CfgFolder config folder
+	CfgFolder = "/etc/docker-volumes/gvfs/"
 )
 
-type gvfsVolume struct {
-	URL         string `json:"url,omitempty"`
-	driver      *gvfsVolumeDriver
-	Password    string `json:"password,omitempty"`
-	Mountpoint  string `json:"mountpoint,omitempty"`
-	connections int
-}
-
-type gvfsVolumeDriver interface {
-	id() DriverType
-	isAvailable() bool
-	mountpoint() (string, error)
-}
-
-//GVfsDriver the global driver responding to call
-type GVfsDriver struct {
-	sync.RWMutex
-	root       string
-	fuseOpts   string
-	env        []string
-	persitence *viper.Viper
-	volumes    map[string]*gvfsVolume
-}
-
-//GVfsPersistence represent struct of persistence file
-type GVfsPersistence struct {
-	Volumes map[string]*gvfsVolume `json:"volumes"`
-}
+//GVfsDriver docker volume plugin driver extension of basic plugin
+type GVfsDriver = basic.Driver
 
 //Init start all needed deps and serve response to API call
 func Init(root string, dbus string, fuseOpts string) *GVfsDriver {
-	d := &GVfsDriver{
-		root:       root,
-		fuseOpts:   fuseOpts,
-		env:        make([]string, 1),
-		persitence: viper.New(),
-		volumes:    make(map[string]*gvfsVolume),
+	logrus.Debugf("Init gluster driver at %s, UniqName: %v", root, mountUniqName)
+	config := basic.DriverConfig{
+		Version:       CfgVersion,
+		Root:          root,
+		Folder:        CfgFolder,
+		MountUniqName: mountUniqName,
 	}
-	d.persitence.SetDefault("volumes", map[string]*gvfsVolume{})
-	d.persitence.SetConfigName("gvfs-persistence")
-	d.persitence.SetConfigType("json")
-	d.persitence.AddConfigPath("/etc/docker-volumes/gvfs/")
-	if err := d.persitence.ReadInConfig(); err != nil { // Handle errors reading the config file
-		logrus.Warn("No persistence file found, I will start with a empty list of volume.", err)
-	} else {
-		logrus.Debug("Retrieving volume list from persistence file.")
-		/**/
-		err := d.persitence.UnmarshalKey("volumes", &d.volumes)
-		if err != nil {
-			logrus.Warn("Unable to decode into struct -> start with empty list, %v", err)
-			d.volumes = make(map[string]*gvfsVolume)
-		}
-		/**/
-		/** Not needed since mountpoint is allready cached in object ? *
-		for k, v := range d.volumes {
-			dr, m, err := getDriver(v.URL)
-			if err != nil {
-				logrus.Warnf("Unable to init driver of %s, %v", url, err)
-			} else {
-				v.driver = dr
-			}
-		}
-		/**/
-		//d.volumes = d.persitence.GetStringMap("volumes")
+	eventHandler := basic.DriverEventHandler{
+		IsValidURI:    isValidURI,
+		OnMountVolume: mountVolume,
+		OnInit:        initDriver,
 	}
-
-	if dbus == "" {
-		// start needed dbus like (eval `dbus-launch --sh-syntax`) and get env variable
-		result, err := exec.Command("dbus-launch", "--sh-syntax").CombinedOutput() //DBUS_SESSION_BUS_ADDRESS='unix:abstract=/tmp/dbus-JHGXLpeJ6A,guid=25ab632502ebccd43cd403bc58388fab';\n ...
-		if err != nil {
-			panic(err)
-		}
-		env := string(result)
-		logrus.Debugf("dbus-launch --sh-syntax -> \n%s", env)
-		reDBus := regexp.MustCompile("DBUS_SESSION_BUS_ADDRESS='(.*?)';")
-		//rePID := regexp.MustCompile("DBUS_SESSION_BUS_PID=(.*?);")
-		matchDBuse := reDBus.FindStringSubmatch(env)
-		//matchPID := rePID.FindStringSubmatch(env)
-		dbus = matchDBuse[1]
-		//TODO plan to kill this add closing ?
-	}
-	d.env[0] = fmt.Sprintf("DBUS_SESSION_BUS_ADDRESS=%s", dbus)
-	err := d.startFuseDeamon()
-	if err != nil {
-		panic(err) //Something went wrong
-	}
-	//d.saveConfig()
-	return d
+	return basic.Init(&config, &eventHandler)
 }
 
-func (d *GVfsDriver) saveConfig() error {
-	cfgFolder := "/etc/docker-volumes/gvfs/"
-	fi, err := os.Lstat(cfgFolder)
-	if os.IsNotExist(err) {
-		if err = os.MkdirAll(cfgFolder, 0700); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-	if fi != nil && !fi.IsDir() {
-		return fmt.Errorf("%v already exist and it's not a directory", d.root)
-	}
-	b, err := json.Marshal(GVfsPersistence{Volumes: d.volumes})
-	if err != nil {
-		logrus.Warn("Unable to encode persistence struct, %v", err)
-	}
-	//logrus.Debug("Writing persistence struct, %v", b, d.volumes)
-	err = ioutil.WriteFile(cfgFolder+"/persistence.json", b, 0600)
-	if err != nil {
-		logrus.Warn("Unable to write persistence struct, %v", err)
-	}
-	//TODO display error messages
-	return err
+func mountVolume(d *basic.Driver, v driver.Volume, m driver.Mount, r *volume.MountRequest) (*volume.MountResponse, error) {
+	//TODO
+	return nil, nil
 }
 
-func (d *GVfsDriver) startFuseDeamon() error {
-	//TODO check needed gvfsd + gvfsd-ftp Maybe already on dbus ?
-	// Normaly gvfsd-fuse block such so this like crash but global ?
-
-	fi, err := os.Lstat(d.root)
-	if os.IsNotExist(err) {
-		if err = os.MkdirAll(d.root, 0700); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-	if fi != nil && !fi.IsDir() {
-		return fmt.Errorf("%v already exist and it's not a directory", d.root)
-	}
-
-	err = d.startCmd("/usr/lib/gvfs/gvfsd --no-fuse") //Start global deamon
-	if err != nil {
-		return err
-	}
-
-	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o %s", d.root, d.fuseOpts)) //Start ftp handler
-	return err
-}
-
-// start deamon in context of this gvfs drive with custome env
-func (d *GVfsDriver) startCmd(cmd string) error {
-	logrus.Debugf(cmd)
-	return setEnv(cmd, d.env).Start()
-}
-
-// run deamon in context of this gvfs drive with custome env
-func (d *GVfsDriver) runCmd(cmd string) error {
-	logrus.Debugf(cmd)
-	return setEnv(cmd, d.env).Run()
-}
-
-//Create create and init the requested volume
-func (d *GVfsDriver) Create(r *volume.CreateRequest) error {
-	logrus.Debugf("Entering Create: name: %s, options %v", r.Name, r.Options)
-	d.Lock()
-	defer d.Unlock()
-
-	if r.Options == nil || r.Options["url"] == "" {
-		return fmt.Errorf("url option required")
-	}
-
-	dr, m, err := getDriver(r.Options["url"])
-	if err != nil {
-		return err
-	}
-
-	v := &gvfsVolume{
-		URL:         r.Options["url"],
-		driver:      dr,
-		Password:    r.Options["password"],
-		Mountpoint:  filepath.Join(d.root, m),
-		connections: 0,
-	}
-
-	d.volumes[r.Name] = v
-	logrus.Debugf("Volume Created: %v", v)
-	if err = d.saveConfig(); err != nil {
-		return err
-	}
-	return nil
-}
-
-//List volumes handled by these driver
-func (d *GVfsDriver) List() (*volume.ListResponse, error) {
-	logrus.Debugf("Entering List")
-
-	d.Lock()
-	defer d.Unlock()
-
-	var vols []*volume.Volume
-	for name, v := range d.volumes {
-		vols = append(vols, &volume.Volume{Name: name, Mountpoint: v.Mountpoint})
-		logrus.Debugf("Volume found: %s", v)
-	}
-	return &volume.ListResponse{Volumes: vols}, nil
-}
-
-//Get get info on the requested volume
-func (d *GVfsDriver) Get(r *volume.GetRequest) (*volume.GetResponse, error) {
-	logrus.Debugf("Entering Get: name: %s", r.Name)
-	d.Lock()
-	defer d.Unlock()
-
-	v, ok := d.volumes[r.Name]
-	if !ok {
-		return nil, fmt.Errorf("volume %s not found", r.Name)
-	}
-
-	logrus.Debugf("Volume found: %s", v)
-	return &volume.GetResponse{Volume: &volume.Volume{Name: r.Name, Mountpoint: v.Mountpoint}}, nil
-}
-
-//Remove remove the requested volume
-func (d *GVfsDriver) Remove(r *volume.RemoveRequest) error {
-	logrus.Debugf("Entering Remove: name: %s", r.Name)
-	d.Lock()
-	defer d.Unlock()
-	v, ok := d.volumes[r.Name]
-
-	if !ok {
-		return fmt.Errorf("volume %s not found", r.Name)
-	}
-	if v.connections == 0 {
-		delete(d.volumes, r.Name)
-		return nil
-	}
-	if err := d.saveConfig(); err != nil {
-		return err
-	}
-	return fmt.Errorf("volume %s is currently used by a container", r.Name)
-}
-
-//Path get path of the requested volume
-func (d *GVfsDriver) Path(r *volume.PathRequest) (*volume.PathResponse, error) {
-	logrus.Debugf("Entering Path: name: %s, options %v", r.Name)
-
-	d.RLock()
-	defer d.RUnlock()
-	v, ok := d.volumes[r.Name]
-	if !ok {
-		return nil, fmt.Errorf("volume %s not found", r.Name)
-	}
-	logrus.Debugf("Volume found: %s", v)
-	return &volume.PathResponse{Mountpoint: v.Mountpoint}, nil
-}
-
-//Mount mount the requested volume
-func (d *GVfsDriver) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
-	logrus.Debugf("Entering Mount: %v", r)
-	d.Lock()
-	defer d.Unlock()
-
-	v, ok := d.volumes[r.Name]
-	if !ok {
-		return nil, fmt.Errorf("volume %s not found", r.Name)
-	}
-
-	if v.connections > 0 {
-		v.connections++
-		return &volume.MountResponse{Mountpoint: v.Mountpoint}, nil
-	}
-
-	cmd := fmt.Sprintf("gio mount %s", v.URL)
-	if v.Password != "" {
-		p := setEnv(cmd, d.env)
-		inStd, err := p.StdinPipe()
-		if err != nil { //Get a input buffer
-			return nil, err
-		}
-		var outStd bytes.Buffer
-		p.Stdout = &outStd
-		var errStd bytes.Buffer
-		p.Stderr = &errStd
-
-		if err := p.Start(); err != nil {
-			return nil, err
-		}
-		inStd.Write([]byte(v.Password + "\n")) //Send password to process + Send return line
-
-		// wait or timeout
-		donec := make(chan error, 1)
-		go func() {
-			donec <- p.Wait() //Process finish
-		}()
-		select {
-		case <-time.After(MountTimeout * time.Second):
-			sOut := outStd.String()
-			sErr := errStd.String()
-			p.Process.Kill()
-			logrus.Debugf("out : %s", sOut)
-			logrus.Debugf("outErr : %s", sErr)
-			return nil, fmt.Errorf("The command %s timeout", cmd)
-		case <-donec:
-			sOut := outStd.String()
-			sErr := errStd.String()
-			logrus.Debugf("Password send and command %s return", cmd)
-			logrus.Debugf("out : %s", sOut)
-			logrus.Debugf("outErr : %s", sErr)
-			// handle erros like : "Error mounting location: Location is already mounted" or Error mounting location: Could not connect to 10.8.0.7: No route to host
-			if strings.Contains(sErr, "Error mounting location") {
-				return nil, fmt.Errorf("Error mounting location : %s", sErr)
-			}
-			v.connections++
-			break
-		}
-	} else {
-		if err := d.runCmd(cmd); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := d.saveConfig(); err != nil {
-		return nil, err
-	}
-	return &volume.MountResponse{Mountpoint: v.Mountpoint}, nil
-}
-
-//Unmount unmount the requested volume
-//TODO Monitor for unmount to remount ?
-func (d *GVfsDriver) Unmount(r *volume.UnmountRequest) error {
-	//Execute gvfs-mount -u $params
-	logrus.Debugf("Entering Unmount: %v", r)
-
-	d.Lock()
-	defer d.Unlock()
-	v, ok := d.volumes[r.Name]
-	if !ok {
-		return fmt.Errorf("volume %s not found", r.Name)
-	}
-	if v.connections <= 1 {
-		cmd := fmt.Sprintf("gio mount -u %s", v.URL)
-		if err := d.runCmd(cmd); err != nil {
-			return err
-		}
-		v.connections = 0
-	} else {
-		v.connections--
-	}
-
-	if err := d.saveConfig(); err != nil {
-		return err
-	}
-	return nil
-}
-
-//Capabilities Send capabilities of the local driver
-func (d *GVfsDriver) Capabilities() *volume.CapabilitiesResponse {
-	logrus.Debugf("Entering Capabilities")
-	return &volume.CapabilitiesResponse{
-		Capabilities: volume.Capability{
-			Scope: "local",
-		},
-	}
+func initDriver(d *basic.Driver) error {
+	//TODO
+	return
 }

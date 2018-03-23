@@ -11,10 +11,6 @@
   branch = "master"
   name = "github.com/spf13/cobra"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/spf13/viper"
-
 [[override]]
   version = "1.0.0-rc4"
   name = "github.com/opencontainers/runc"
