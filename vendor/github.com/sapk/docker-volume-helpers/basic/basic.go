@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/sapk/docker-volume-helpers/driver"
@@ -40,9 +39,9 @@ func (d *Mountpoint) SetConnections(n int) {
 
 //Volume represent a docker volume
 type Volume struct {
-	VolumeURI   string `json:"voluri"`
-	Mount       string `json:"mount"`
-	Connections int    `json:"connections"`
+	Options     map[string]string `json:"options"`
+	Mount       string            `json:"mount"`
+	Connections int               `json:"connections"`
 }
 
 //GetMount get mount of volume
@@ -50,9 +49,9 @@ func (v *Volume) GetMount() string {
 	return v.Mount
 }
 
-//GetRemote get remote definition of volume
-func (v *Volume) GetRemote() string {
-	return v.VolumeURI
+//GetOptions get options definition of volume
+func (v *Volume) GetOptions() map[string]string {
+	return v.Options
 }
 
 //GetConnections get number of connection on volume
@@ -85,15 +84,15 @@ type Driver struct {
 type DriverConfig struct {
 	Version       int
 	Root          string
-	MountUniqName bool
 	Folder        string
+	CustomOptions map[string]interface{}
 }
 
 //DriverEventHandler contains function to execute on event
 type DriverEventHandler struct {
-	IsValidURI    func(string) bool
 	OnInit        func(*Driver) error
 	OnMountVolume func(*Driver, driver.Volume, driver.Mount, *volume.MountRequest) (*volume.MountResponse, error)
+	GetMountName  func(d *Driver, r *volume.CreateRequest) (string, error)
 }
 
 //GetVolumes list volumes of driver
@@ -123,20 +122,16 @@ func (d *Driver) GetLock() *sync.RWMutex {
 func (d *Driver) Create(r *volume.CreateRequest) error {
 	logrus.Debugf("Entering Create: name: %s, options %v", r.Name, r.Options)
 
-	if r.Options == nil || r.Options["voluri"] == "" {
-		return fmt.Errorf("voluri option required")
-	}
-	r.Options["voluri"] = strings.Trim(r.Options["voluri"], "\"")
-	if !d.EventHandler.IsValidURI(r.Options["voluri"]) {
-		return fmt.Errorf("voluri option is malformated")
-	}
-
 	d.GetLock().Lock()
 	defer d.GetLock().Unlock()
 
+	mountName, err := d.EventHandler.GetMountName(d, r)
+	if err != nil {
+		return err
+	}
 	v := &Volume{
-		VolumeURI:   r.Options["voluri"],
-		Mount:       GetMountName(d, r),
+		Options:     r.Options,
+		Mount:       mountName,
 		Connections: 0,
 	}
 
@@ -227,7 +222,7 @@ func (d *Driver) SaveConfig() error {
 		return fmt.Errorf("SaveConfig: %s", err)
 	}
 	if fi != nil && !fi.IsDir() {
-		return fmt.Errorf("SaveConfig: %v already exist and it's not a directory", d.Config.Root)
+		return fmt.Errorf("SaveConfig: %v already exist and it's not a directory", d.Config.Folder)
 	}
 	b, err := json.Marshal(Persistence{Version: d.Config.Version, Volumes: d.Volumes, Mounts: d.Mounts})
 	if err != nil {
@@ -277,7 +272,7 @@ func (d *Driver) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 
 //Init load configuration and serve response to API call
 func Init(config *DriverConfig, eventHandler *DriverEventHandler) *Driver {
-	logrus.Debugf("Init basic driver at %s, UniqName: %v", config.Root, config.MountUniqName)
+	logrus.Debugf("Init basic driver at %s", config.Root)
 	d := &Driver{
 		Config:       config,
 		Persistence:  viper.New(),

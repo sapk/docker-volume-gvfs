@@ -20,8 +20,6 @@ const (
 	DBusFlag = "dbus"
 	//EnvDBus env to set or get from session DBus path
 	EnvDBus = "DBUS_SESSION_BUS_ADDRESS"
-	//MountUniqNameFlag flag to set mount point based on definition and not name of volume to not have multile mount of same distant volume
-	MountUniqNameFlag = "mount-uniq"
 	//BasedirFlag flag to set the basedir of mounted volumes
 	BasedirFlag = "basedir"
 	longHelp    = `
@@ -41,11 +39,10 @@ var (
 	//BuildTime build time of running code
 	BuildTime string
 	//PluginAlias plugin alias name in docker
-	PluginAlias   = "gvfs"
-	baseDir       = ""
-	fuseOpts      = ""
-	mountUniqName = false
-	rootCmd       = &cobra.Command{
+	PluginAlias = "gvfs"
+	baseDir     = ""
+	fuseOpts    = ""
+	rootCmd     = &cobra.Command{
 		Use:              "docker-volume-gvfs",
 		Short:            "GVfs - Docker volume driver plugin",
 		Long:             longHelp,
@@ -85,7 +82,7 @@ func typeOrEnv(cmd *cobra.Command, flag, envname string) string {
 
 func daemonStart(cmd *cobra.Command, args []string) {
 	dbus := typeOrEnv(cmd, DBusFlag, EnvDBus)
-	driver := drivers.Init(baseDir, mountUniqName, dbus, fuseOpts)
+	driver := drivers.Init(baseDir, dbus, fuseOpts)
 	logrus.Debug(driver)
 	h := volume.NewHandler(driver)
 	logrus.Debug(h)
@@ -101,7 +98,6 @@ func setupFlags() {
 
 	daemonCmd.Flags().StringP(DBusFlag, "d", "", "DBus address to use for gvfs.  Can also set default environment DBUS_SESSION_BUS_ADDRESS")
 	daemonCmd.Flags().StringVarP(&fuseOpts, FuseFlag, "o", "big_writes,allow_other,auto_cache", "Fuse options to use for gvfs moint point") //Other ex  big_writes,use_ino,allow_other,auto_cache,umask=0022
-	daemonCmd.Flags().BoolVar(&mountUniqName, MountUniqNameFlag, os.Getenv("MOUNT_UNIQ") == "1", "Set mountpoint based on definition and not the name of volume")
 }
 
 func setupLogger(cmd *cobra.Command, args []string) {

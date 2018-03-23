@@ -23,7 +23,7 @@ type Driver interface {
 type Volume interface {
 	increasable
 	GetMount() string
-	GetRemote() string
+	GetOptions() map[string]string
 	GetStatus() map[string]interface{}
 }
 
