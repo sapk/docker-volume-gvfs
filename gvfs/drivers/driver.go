@@ -122,28 +122,31 @@ func mountVolume(d *basic.Driver, v driver.Volume, m driver.Mount, r *volume.Mou
 }
 
 func initDriver(d *basic.Driver) error {
-	dbusConfig, ok := d.Config.CustomOptions["dbus"]
-	if !ok {
-		return fmt.Errorf("Failed to find dbus params in driver custom options")
-	}
-	if dbusConfig.(string) == "" {
-		// start needed dbus like (eval `dbus-launch --sh-syntax`) and get env variable
-		result, err := exec.Command("dbus-launch", "--sh-syntax").CombinedOutput() //DBUS_SESSION_BUS_ADDRESS='unix:abstract=/tmp/dbus-JHGXLpeJ6A,guid=25ab632502ebccd43cd403bc58388fab';\n ...
-		if err != nil {
-			panic(err)
+	go func(d *basic.Driver) {
+		dbusConfig, ok := d.Config.CustomOptions["dbus"]
+		if !ok {
+			//return fmt.Errorf("Failed to find dbus params in driver custom options")
 		}
-		env := string(result)
-		logrus.Debugf("dbus-launch --sh-syntax -> \n%s", env)
-		reDBus := regexp.MustCompile("DBUS_SESSION_BUS_ADDRESS='(.*?)';")
-		//rePID := regexp.MustCompile("DBUS_SESSION_BUS_PID=(.*?);")
-		matchDBuse := reDBus.FindStringSubmatch(env)
-		//matchPID := rePID.FindStringSubmatch(env)
-		d.Config.CustomOptions["dbus"] = matchDBuse[1]
-		//TODO plan to kill this add closing ?
-	}
+		if dbusConfig.(string) == "" {
+			// start needed dbus like (eval `dbus-launch --sh-syntax`) and get env variable
+			result, err := exec.Command("dbus-launch", "--sh-syntax").CombinedOutput() //DBUS_SESSION_BUS_ADDRESS='unix:abstract=/tmp/dbus-JHGXLpeJ6A,guid=25ab632502ebccd43cd403bc58388fab';\n ...
+			if err != nil {
+				panic(err)
+			}
+			env := string(result)
+			logrus.Debugf("dbus-launch --sh-syntax -> \n%s", env)
+			reDBus := regexp.MustCompile("DBUS_SESSION_BUS_ADDRESS='(.*?)';")
+			//rePID := regexp.MustCompile("DBUS_SESSION_BUS_PID=(.*?);")
+			matchDBuse := reDBus.FindStringSubmatch(env)
+			//matchPID := rePID.FindStringSubmatch(env)
+			d.Config.CustomOptions["dbus"] = matchDBuse[1]
+			//TODO plan to kill this add closing ?
+		}
 
-	d.Config.CustomOptions["env"] = []string{fmt.Sprintf("DBUS_SESSION_BUS_ADDRESS=%s", d.Config.CustomOptions["dbus"])}
-	return startFuseDeamon(d)
+		d.Config.CustomOptions["env"] = []string{fmt.Sprintf("DBUS_SESSION_BUS_ADDRESS=%s", d.Config.CustomOptions["dbus"])}
+		startFuseDeamon(d)
+	}(d)
+	return nil
 }
 
 func startFuseDeamon(d *GVfsDriver) error {
