@@ -113,6 +113,18 @@ func (d *Driver) GetMounts() map[string]driver.Mount {
 	return mi
 }
 
+//RemoveVolume remove a volume of driver
+func (d *Driver) RemoveVolume(id string) error {
+	delete(d.Volumes, id)
+	return nil
+}
+
+//RemoveMount remove a mount of driver
+func (d *Driver) RemoveMount(id string) error {
+	delete(d.Mounts, id)
+	return nil
+}
+
 //GetLock list lock of driver
 func (d *Driver) GetLock() *sync.RWMutex {
 	return &d.Lock

@@ -14,7 +14,9 @@ import (
 type Driver interface {
 	GetLock() *sync.RWMutex
 	GetVolumes() map[string]Volume
+	RemoveVolume(string) error
 	GetMounts() map[string]Mount
+	RemoveMount(string) error
 	SaveConfig() error
 	RunCmd(string) error
 }
@@ -96,9 +98,13 @@ func Remove(d Driver, vName string) error {
 			if err := os.Remove(m.GetPath()); err != nil && !strings.Contains(err.Error(), "no such file or directory") {
 				return err
 			}
-			delete(d.GetMounts(), v.GetMount())
+			if err := d.RemoveMount(v.GetMount()); err != nil {
+				return err
+			}
 		}
-		delete(d.GetVolumes(), vName)
+		if err := d.RemoveVolume(vName); err != nil {
+			return err
+		}
 		return d.SaveConfig()
 	}
 	return fmt.Errorf("volume %s is currently used by a container", vName)
