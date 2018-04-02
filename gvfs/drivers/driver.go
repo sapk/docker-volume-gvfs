@@ -156,12 +156,12 @@ func (d *GVfsDriver) startFuseDeamon() error {
 		return fmt.Errorf("%v already exist and it's not a directory", d.root)
 	}
 
-	err = d.startCmd("/usr/lib/gvfs/gvfsd --no-fuse") //Start global deamon
+	err = d.startCmd("/usr/lib/gvfsd --no-fuse") //Start global deamon
 	if err != nil {
 		return err
 	}
 
-	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfs/gvfsd-fuse %s -f -o %s", d.root, d.fuseOpts)) //Start ftp handler
+	err = d.startCmd(fmt.Sprintf("/usr/lib/gvfsd-fuse %s -f -o %s", d.root, d.fuseOpts)) //Start ftp handler
 	return err
 }
 
