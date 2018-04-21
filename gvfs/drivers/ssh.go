@@ -15,7 +15,7 @@ func (d SSHVolumeDriver) id() DriverType {
 }
 
 func (d SSHVolumeDriver) isAvailable() bool {
-	is, err := isFile("/usr/lib/gvfs/gvfsd-sftp")
+	is, err := isFile("/usr/lib/gvfsd-sftp")
 	if err == nil {
 		return is
 	}

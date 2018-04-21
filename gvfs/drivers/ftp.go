@@ -15,7 +15,7 @@ func (d FTPVolumeDriver) id() DriverType {
 }
 
 func (d FTPVolumeDriver) isAvailable() bool {
-	is, err := isFile("/usr/lib/gvfs/gvfsd-ftp")
+	is, err := isFile("/usr/lib/gvfsd-ftp")
 	if err == nil {
 		return is
 	}

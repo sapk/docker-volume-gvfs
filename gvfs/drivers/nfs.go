@@ -15,7 +15,7 @@ func (d NFSVolumeDriver) id() DriverType {
 }
 
 func (d NFSVolumeDriver) isAvailable() bool {
-	is, err := isFile("/usr/lib/gvfs/gvfsd-nfs")
+	is, err := isFile("/usr/lib/gvfsd-nfs")
 	if err == nil {
 		return is
 	}

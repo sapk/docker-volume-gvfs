@@ -15,7 +15,7 @@ func (d SMBVolumeDriver) id() DriverType {
 }
 
 func (d SMBVolumeDriver) isAvailable() bool {
-	is, err := isFile("/usr/lib/gvfs/gvfsd-smb")
+	is, err := isFile("/usr/lib/gvfsd-smb")
 	if err == nil {
 		return is
 	}

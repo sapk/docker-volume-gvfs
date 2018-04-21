@@ -15,7 +15,7 @@ func (d DavVolumeDriver) id() DriverType {
 }
 
 func (d DavVolumeDriver) isAvailable() bool {
-	is, err := isFile("/usr/lib/gvfs/gvfsd-dav")
+	is, err := isFile("/usr/lib/gvfsd-dav")
 	if err == nil {
 		return is
 	}
